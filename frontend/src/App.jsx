@@ -70,7 +70,12 @@ function App() {
 
       {loading ? (
         <div className="loading">
-          <div className="loader"></div>
+          <div className="loader-bars">
+            <div className="loader-bar"></div>
+            <div className="loader-bar"></div>
+            <div className="loader-bar"></div>
+            <div className="loader-bar"></div>
+          </div>
           Analyzing Cloud Workloads...
         </div>
       ) : (

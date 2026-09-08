@@ -28,6 +28,12 @@ body {
   background-image: 
     radial-gradient(circle at 15% 50%, rgba(79, 172, 254, 0.08), transparent 25%),
     radial-gradient(circle at 85% 30%, rgba(0, 242, 254, 0.08), transparent 25%);
+  animation: bgPulse 15s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
 }
 
 .app-container {
@@ -48,12 +54,20 @@ body {
 .header h1 {
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(to right, var(--accent-purple), var(--accent-blue));
+  background: linear-gradient(270deg, var(--accent-purple), var(--accent-blue), var(--accent-purple));
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  animation: gradientShift 5s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .header .badge {
@@ -64,6 +78,13 @@ body {
   font-size: 0.875rem;
   font-weight: 500;
   border: 1px solid rgba(46, 160, 67, 0.2);
+  animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+  0% { box-shadow: 0 0 0 0 rgba(46, 160, 67, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(46, 160, 67, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 160, 67, 0); }
 }
 
 /* Dashboard Grid */
@@ -81,10 +102,21 @@ body {
   border: 1px solid var(--border-card);
   border-radius: 16px;
   padding: 1.5rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, border-color 0.4s ease;
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  animation: fadeInUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
 
 .glass-card:hover {
   transform: translateY(-4px);
@@ -157,9 +189,18 @@ body {
 .data-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 0.75rem 0.5rem;
+  margin: 0.25rem -0.5rem;
+  border-radius: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
   font-size: 0.95rem;
+  transition: background-color 0.2s ease, padding-left 0.2s ease;
+  cursor: default;
+}
+
+.data-item:hover {
+  background-color: rgba(255,255,255,0.05);
+  padding-left: 1rem;
 }
 
 .data-item:last-child {
@@ -177,24 +218,36 @@ body {
 /* Loading State */
 .loading {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 60vh;
   font-size: 1.2rem;
-  color: var(--text-secondary);
+  color: var(--accent-blue);
+  font-weight: 500;
+  gap: 1.5rem;
 }
 
-.loader {
-  border: 3px solid rgba(255,255,255,0.1);
-  border-top: 3px solid var(--accent-blue);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin-right: 1rem;
+.loader-bars {
+  display: flex;
+  gap: 0.5rem;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.loader-bar {
+  width: 8px;
+  height: 32px;
+  background: var(--accent-blue);
+  border-radius: 4px;
+  animation: pulseBar 1s ease-in-out infinite;
+  box-shadow: 0 0 10px var(--accent-blue);
+}
+
+.loader-bar:nth-child(1) { animation-delay: 0.1s; }
+.loader-bar:nth-child(2) { animation-delay: 0.2s; }
+.loader-bar:nth-child(3) { animation-delay: 0.3s; }
+.loader-bar:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes pulseBar {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.5; box-shadow: 0 0 5px var(--accent-blue); }
+  50% { transform: scaleY(1.2); opacity: 1; box-shadow: 0 0 15px var(--accent-blue); }
 }

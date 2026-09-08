@@ -9,7 +9,7 @@ const Dashboard = ({ data }) => {
   return (
     <main className="dashboard-grid">
       {/* Health Card */}
-      <section className="glass-card">
+      <section className="glass-card delay-1">
         <div className="card-header">
           <div className="card-icon health">
             <Activity size={24} />
@@ -44,7 +44,7 @@ const Dashboard = ({ data }) => {
       </section>
 
       {/* Security Card */}
-      <section className="glass-card">
+      <section className="glass-card delay-2">
         <div className="card-header">
           <div className="card-icon security">
             <ShieldAlert size={24} />
@@ -89,7 +89,7 @@ const Dashboard = ({ data }) => {
       </section>
 
       {/* Cost Card */}
-      <section className="glass-card">
+      <section className="glass-card delay-3">
         <div className="card-header">
           <div className="card-icon cost">
             <DollarSign size={24} />
