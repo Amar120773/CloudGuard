@@ -1,0 +1,287 @@
+/** Representative API payloads, shaped exactly like the backend's responses. */
+
+export const forecastPoints = Array.from({ length: 30 }, (_, i) => ({
+  date: `2026-10-${String(i + 2).padStart(2, '0')}`,
+  predicted_cost: 480 + i * 2,
+  lower_bound: 460 + i * 2,
+  upper_bound: 500 + i * 2,
+}))
+
+export const historyTail = Array.from({ length: 30 }, (_, i) => ({
+  date: `2026-09-${String(i + 1).padStart(2, '0')}`,
+  cost: 440 + i * 1.5,
+}))
+
+export const serviceBreakdown = [
+  {
+    service: 'Amazon Relational Database Service',
+    total_cost: 11845.14, share_pct: 26.42, daily_average: 100.38,
+    trend_pct: 5.11, projected_month_end: 4541.71, is_risk: true,
+  },
+  {
+    service: 'Amazon Elastic Compute Cloud - Compute',
+    total_cost: 14965.62, share_pct: 33.38, daily_average: 126.83,
+    trend_pct: -7.02, projected_month_end: 4144.13, is_risk: false,
+  },
+  {
+    service: 'AWS Data Transfer',
+    total_cost: 4346.41, share_pct: 9.69, daily_average: 36.83,
+    trend_pct: 11.42, projected_month_end: 1894.53, is_risk: false,
+  },
+]
+
+export const securityEvents = [
+  {
+    event_id: 'evt-anomaly-1',
+    timestamp: '2026-10-01T20:23:11Z',
+    event_type: 'Authentication failure burst',
+    source: 'eni-live0001',
+    region: 'us-east-1',
+    metric: 'authentication_failures',
+    value: 366,
+    metrics: {
+      traffic_volume: 9223672, network_transfer: 998.69, connection_count: 1832,
+      request_frequency: 2556, failed_api_requests: 480,
+      authentication_failures: 366, distinct_source_ips: 465,
+    },
+    anomaly_score: 98.42,
+    raw_decision_score: -0.341,
+    status: 'ANOMALY',
+    severity: 'CRITICAL',
+    deviations: [
+      { feature: 'authentication_failures', value: 366, baseline_mean: 0, z_score: 8.81, direction: 'above' },
+      { feature: 'failed_api_requests', value: 480, baseline_mean: 0, z_score: 6.12, direction: 'above' },
+    ],
+    context: 'authentication failures is 8.8 standard deviations above the learned baseline.',
+    recommended_action: 'Treat as possible credential stuffing. Review the source IPs.',
+    simulated_anomaly: true,
+  },
+  {
+    event_id: 'evt-routine-1',
+    timestamp: '2026-10-01T20:19:31Z',
+    event_type: 'Normal API error rate',
+    source: 'eni-443bb826',
+    region: 'us-east-1',
+    metric: 'failed_api_requests',
+    value: 2,
+    metrics: {
+      traffic_volume: 300000, network_transfer: 22.1, connection_count: 95,
+      request_frequency: 140, failed_api_requests: 2,
+      authentication_failures: 0, distinct_source_ips: 21,
+    },
+    anomaly_score: 22.9,
+    raw_decision_score: 0.101,
+    status: 'ROUTINE',
+    severity: 'INFO',
+    deviations: [
+      { feature: 'failed_api_requests', value: 2, baseline_mean: 0, z_score: -0.21, direction: 'below' },
+    ],
+    context: 'Within the normal operating envelope (score 23/100).',
+    recommended_action: null,
+    simulated_anomaly: false,
+  },
+]
+
+export const dashboardPayload = {
+  generated_at: '2026-10-01T20:30:00Z',
+  overview: {
+    current_spend_mtd: 482.67,
+    forecast_month_end: 14641.14,
+    forecast_lower: 14168.17,
+    forecast_upper: 15116.66,
+    cost_trend_pct: 4.59,
+    cost_risk_level: 'ELEVATED',
+    cost_risk_services: 1,
+    budget_breach_expected: true,
+    anomaly_count: 5,
+    total_security_events: 241,
+    security_health_score: 59.9,
+    critical_anomalies: 3,
+    active_resources: 7,
+    idle_resources: 1,
+    potential_monthly_savings: 7.89,
+    cloud_health_status: 'Healthy',
+    cloud_health_score: 94.4,
+  },
+  cost: {
+    currency: 'USD',
+    start_date: '2026-06-04',
+    end_date: '2026-10-01',
+    total_cost: 44839.93,
+    month_to_date: 482.67,
+    daily_average: 380.0,
+    records_analysed: 944,
+    daily: historyTail,
+    by_service: serviceBreakdown.map((s) => ({ ...s, projected_month_end: null })),
+    freshness: { cached: true, age_seconds: 12, stale: false, source: 'cache' },
+  },
+  forecast: {
+    model_name: 'prophet',
+    model_detail: 'interpolated 2 missing day(s)',
+    horizon_days: 30,
+    interval_width: 0.85,
+    generated_at: '2026-10-01T20:29:00Z',
+    currency: 'USD',
+    forecast: forecastPoints,
+    history_tail: historyTail,
+    month_to_date: 482.67,
+    projected_month_end: 14641.14,
+    projected_month_end_lower: 14168.17,
+    projected_month_end_upper: 15116.66,
+    next_7_days_total: 3210.33,
+    next_30_days_total: 14158.48,
+    trend_pct: 4.59,
+    trend_direction: 'increasing',
+    risk_level: 'ELEVATED',
+    risk_services: [serviceBreakdown[0]],
+    service_breakdown: serviceBreakdown,
+    spending_warning: 'Projected month-end spend of $14,641 exceeds the $14,000 budget by $641.',
+    abnormal_spending_detected: true,
+    budget: {
+      monthly_budget: 14000,
+      projected_month_end: 14641.14,
+      projected_vs_budget_pct: 4.58,
+      budget_breach_expected: true,
+      budget_breach_possible: true,
+      headroom: -641.14,
+      days_remaining_in_month: 30,
+    },
+    accuracy: {
+      mae: 9.838, mape: 2.22, rmse: 12.16, backtest_days: 14,
+      baseline_mae: 12.178, skill_vs_baseline_pct: 19.22,
+    },
+    freshness: { cached: true, age_seconds: 12, stale: false, source: 'cache' },
+  },
+  security: {
+    model_name: 'IsolationForest',
+    generated_at: '2026-10-01T20:29:30Z',
+    secure: false,
+    security_health_score: 59.9,
+    total_events: 241,
+    anomaly_count: 5,
+    anomaly_rate_pct: 2.07,
+    severity_breakdown: { CRITICAL: 3, HIGH: 2 },
+    top_anomalies: [securityEvents[0]],
+    recent_events: [],
+    features_used: [
+      'traffic_volume', 'network_transfer', 'connection_count', 'request_frequency',
+      'failed_api_requests', 'authentication_failures', 'distinct_source_ips',
+    ],
+    contamination: 0.025,
+    score_threshold: 65,
+    preparation_notes: [],
+    accuracy: {
+      precision: 1.0, recall: 1.0, f1_score: 1.0,
+      true_positives: 5, false_positives: 0, false_negatives: 0,
+      labelled_anomalies: 5, note: 'Ground truth covers only the seeded outliers.',
+    },
+    freshness: { cached: true, age_seconds: 11, stale: false, source: 'cache' },
+  },
+  cloud_health: {
+    status: 'Healthy', health_score: 94.4, active_resources: 7,
+    idle_resources: 1, average_cpu: 48.2, estimated_monthly_cost: 1089.6,
+    freshness: { cached: true, age_seconds: 12, stale: false, source: 'cache' },
+  },
+  recent_events: securityEvents,
+  insights: [
+    {
+      insight_id: 'security-top-evt-anomaly-1',
+      category: 'SECURITY',
+      title: 'Authentication failure burst flagged as anomalous',
+      metric: 'authentication failures = 366.00',
+      model_signal: 'Anomaly score 98.42/100, 8.8σ above baseline',
+      narrative: 'A statistically unusual event was detected on eni-live0001.',
+      action: 'Treat as possible credential stuffing.',
+      severity: 'CRITICAL',
+      confidence: null,
+      source_model: 'IsolationForest',
+      generated_at: '2026-10-01T20:30:00Z',
+      related_resource_ids: ['eni-live0001'],
+    },
+    {
+      insight_id: 'cost-budget-breach',
+      category: 'COST',
+      title: 'Projected spend exceeds the monthly budget',
+      metric: '$14,641 vs $14,000 budget',
+      model_signal: 'Overrun $641 (+4.6%), 30 days remaining',
+      narrative: 'At the current trajectory the month will close about $641 over budget.',
+      action: 'Cut or defer discretionary workloads now.',
+      severity: 'HIGH',
+      confidence: 0.85,
+      source_model: 'prophet',
+      generated_at: '2026-10-01T20:30:00Z',
+      related_resource_ids: [],
+    },
+  ],
+  pipelines: [
+    { name: 'cost_history', ready: true, stale: false, state: 'fresh', age_seconds: 12, last_success_at: null, message: null },
+    { name: 'cost_forecast', ready: true, stale: false, state: 'fresh', age_seconds: 12, last_success_at: null, message: null },
+    { name: 'security_anomalies', ready: true, stale: false, state: 'fresh', age_seconds: 11, last_success_at: null, message: null },
+    { name: 'cloud_resources', ready: true, stale: false, state: 'fresh', age_seconds: 12, last_success_at: null, message: null },
+    { name: 'cloud_metrics', ready: true, stale: false, state: 'fresh', age_seconds: 12, last_success_at: null, message: null },
+  ],
+  pending_task_ids: [],
+  degraded: false,
+  freshness: { cached: false, generated_at: '2026-10-01T20:30:00Z', age_seconds: 0, source: 'pipeline', stale: false, state: 'fresh' },
+}
+
+/** Same dashboard, but two pipelines are past their freshness threshold. */
+export const staleDashboardPayload = {
+  ...dashboardPayload,
+  pipelines: dashboardPayload.pipelines.map((p, i) =>
+    i < 2
+      ? { ...p, stale: true, state: 'stale', age_seconds: 900, message: 'Last updated 900s ago, beyond the freshness threshold.' }
+      : p,
+  ),
+  freshness: { cached: false, generated_at: '2026-10-01T20:30:00Z', age_seconds: 0, source: 'pipeline', stale: true, state: 'stale' },
+}
+
+export const coldDashboardPayload = {
+  ...dashboardPayload,
+  cost: null,
+  forecast: null,
+  security: null,
+  cloud_health: null,
+  recent_events: [],
+  insights: [
+    {
+      insight_id: 'system-cold-start',
+      category: 'SYSTEM',
+      title: 'Analysis pipelines have not run yet',
+      metric: '0 pipelines complete',
+      model_signal: null,
+      narrative: 'No forecast or anomaly results are cached yet.',
+      action: 'Run POST /api/dashboard/refresh.',
+      severity: 'INFO',
+      confidence: null,
+      source_model: null,
+      generated_at: '2026-10-01T20:30:00Z',
+      related_resource_ids: [],
+    },
+  ],
+  overview: {
+    ...dashboardPayload.overview,
+    current_spend_mtd: 0, forecast_month_end: 0, forecast_lower: 0, forecast_upper: 0,
+    anomaly_count: 0, total_security_events: 0, active_resources: 0, idle_resources: 0,
+    cloud_health_status: 'Unknown', cloud_health_score: 0,
+  },
+  pipelines: dashboardPayload.pipelines.map((p) => ({
+    ...p, ready: false, stale: false, state: 'unavailable', age_seconds: null,
+    message: `${p.name} has not run yet.`,
+  })),
+}
+
+export const healthPayload = {
+  status: 'ok',
+  app: 'CloudGuard API',
+  version: '1.0.0',
+  environment: 'development',
+  cloud_mode: 'moto_inproc',
+  timestamp: '2026-10-01T20:30:00Z',
+  dependencies: [
+    { name: 'api', healthy: true, detail: 'FastAPI is serving requests', metadata: {} },
+    { name: 'redis', healthy: true, detail: 'Connected (0.9ms)', metadata: {} },
+    { name: 'celery', healthy: true, detail: '1 worker(s) online', metadata: { workers: 1 } },
+    { name: 'cloud', healthy: true, detail: 'aws via moto_inproc', metadata: {} },
+  ],
+}

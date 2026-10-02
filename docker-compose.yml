@@ -1,0 +1,117 @@
+# CloudGuard local stack: frontend, API, Celery worker, Celery beat, Redis.
+#
+#   docker compose up --build
+#   -> dashboard  http://localhost:5173
+#      API docs   http://localhost:8000/docs
+#
+# The API and the worker run the same image with different commands, which is
+# what keeps heavy ML work off the request path.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: cloudguard-redis
+    # Cache + broker only: an append-only log would be pure overhead here.
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [cloudguard]
+
+  backend:
+    build:
+      context: ./backend
+    container_name: cloudguard-api
+    env_file: [.env]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CLOUD_MODE: ${CLOUD_MODE:-moto_inproc}
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [cloudguard]
+
+  worker:
+    build:
+      context: ./backend
+    container_name: cloudguard-worker
+    env_file: [.env]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CLOUD_MODE: ${CLOUD_MODE:-moto_inproc}
+    # Prophet and IsolationForest are CPU-bound; a small prefork pool keeps a
+    # long fit from blocking shorter ingestion tasks.
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks: [cloudguard]
+
+  beat:
+    build:
+      context: ./backend
+    container_name: cloudguard-beat
+    env_file: [.env]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CLOUD_MODE: ${CLOUD_MODE:-moto_inproc}
+    # Periodic metric collection (spec objective 2). The schedule file lives in
+    # /tmp so the healthcheck below can use its freshness as a liveness signal.
+    command: >
+      celery -A app.workers.celery_app beat --loglevel=info
+      --schedule=/tmp/celerybeat-schedule
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    restart: unless-stopped
+    # Beat serves no HTTP and answers no pings, so the image's API healthcheck
+    # would mark a perfectly healthy scheduler unhealthy. A beat that has stopped
+    # ticking stops touching its schedule file, which is the real signal.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import os,sys,time; p='/tmp/celerybeat-schedule';
+          sys.exit(0 if any(os.path.exists(p+s) for s in ('','.db','.dat'))
+          and time.time()-max(os.path.getmtime(p+s) for s in ('','.db','.dat')
+          if os.path.exists(p+s)) < 600 else 1)"
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks: [cloudguard]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty = same-origin /api via the nginx proxy below. Set this to the
+        # public API URL when hosting the dashboard separately from the API.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    container_name: cloudguard-ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks: [cloudguard]
+
+networks:
+  cloudguard:
+    driver: bridge

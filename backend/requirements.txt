@@ -1,10 +1,33 @@
-fastapi==0.111.0
-uvicorn==0.30.1
-pydantic==2.7.4
-boto3==1.34.131
-moto[all]==5.0.9
-redis==5.0.6
+# ---- Web / API ----
+fastapi==0.115.6
+# 0.31.0 is the first release whose FORWARDED_ALLOW_IPS accepts CIDR networks
+# (10.0.0.0/8), not just exact addresses. PaaS proxies connect from changing
+# addresses inside a private range, so per-client rate limiting needs it.
+uvicorn[standard]==0.31.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+
+# ---- Async processing / cache ----
 celery==5.4.0
-scikit-learn==1.5.0
-prophet==1.1.5
-pandas==2.2.2
+redis==5.2.1
+
+# ---- Cloud integration ----
+boto3==1.35.68
+botocore==1.35.68
+moto[all]==5.0.22
+
+# ---- Machine learning ----
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+prophet==1.1.6
+# Prophet 1.1.6 ships a trimmed CmdStan tree (prebuilt prophet_model.bin, no
+# makefile) and pins cmdstanpy without an upper bound. cmdstanpy >= 1.3 rejects
+# that tree in validate_cmdstan_path, so every Stan backend fails to load and
+# Prophet raises "no attribute 'stan_backend'". Keep this pin below 1.3.
+cmdstanpy==1.2.4
+
+# ---- Testing ----
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.27.2
