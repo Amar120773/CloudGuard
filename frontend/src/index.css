@@ -78,7 +78,7 @@
   --status-neutral-bg: rgba(255, 255, 255, 0.065);
 
   /* --- type --- */
-  --font-sans: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Outfit Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'SFMono-Regular', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
   /* --- geometry --- */

@@ -293,8 +293,10 @@ A welcome screen, then five pages; dark theme, responsive to phone width.
 ### Visualisation decisions
 
 Charts are hand-rolled SVG — no chart library — which keeps the entry bundle at
-**~68 KB gzipped** (59.5 KB of JavaScript plus 8.7 KB of CSS) and gives exact
-control over the marks.
+**~68 KB gzipped** (59.5 KB of JavaScript plus 9 KB of CSS) and gives exact
+control over the marks. The Outfit typeface ships with the app as a variable
+font (a 32 KB file covers Latin text), so nothing loads from a font CDN and the
+design's in-between weights render exactly.
 
 Motion is CSS only and animates `transform` and `opacity`, so it stays on the
 compositor: the welcome screen's sweep and orbits, its exit into the dashboard,
@@ -400,6 +402,13 @@ password. Log lines carry redacted URLs (`rediss://***@host:6380/0`), and a
 filter on the log handler masks credentials in any message or traceback a
 library emits, as a backstop.
 
+**Shared demo data.** "Inject test anomaly" appends an event to data every
+visitor sees, and it stays until the API restarts. So it is refused with
+`403 anomaly_injection_disabled` when `ENVIRONMENT=production`, and the button
+and its command-palette entry are hidden there. Set `ALLOW_ANOMALY_INJECTION`
+to `true` or `false` to decide explicitly, for example `true` on a private
+demo. The check runs on the server, so it holds for direct API calls too.
+
 **CORS.** Credentials are off (`allow_credentials=False`): the API authenticates
 with a header, never a cookie, so no cross-origin request needs them.
 `CORS_ORIGINS` never becomes `*`; an empty value falls back to an explicit
@@ -448,6 +457,7 @@ Interactive docs: <http://localhost:8000/docs>
 | `202` | Work accepted; poll the task |
 | `404` | Unknown task or event id |
 | `401` / `403` | Missing / wrong `X-API-Key` (only when auth is enabled) |
+| `403` | `anomaly_injection_disabled`: test-anomaly injection is off on this deployment |
 | `422` | Validation failure, or too little data to model |
 | `429` | Rate limit exceeded — `Retry-After` says when to try again |
 | `502` | Cloud API failure |
@@ -474,6 +484,7 @@ annotated list. The ones worth knowing:
 | `PROPHET_CHANGEPOINT_PRIOR_SCALE` | `0.01` | Higher = trend follows recent changes more eagerly |
 | `ANOMALY_CONTAMINATION` | `0.025` | Expected outlier rate; higher flags more |
 | `ANOMALY_SCORE_THRESHOLD` | `65` | Minimum 0-100 score to report an anomaly |
+| `ALLOW_ANOMALY_INJECTION` | unset: off only when `ENVIRONMENT=production` | Turn "Inject test anomaly" on for a private demo, or off anywhere |
 | `CACHE_TTL_FORECAST` | `3600` | How long a forecast stays warm |
 
 `CORS_ORIGINS` accepts either `a,b` or a JSON array.
@@ -483,13 +494,13 @@ annotated list. The ones worth knowing:
 ## Testing
 
 ```bash
-# Backend — 329 tests
+# Backend — 343 tests
 cd backend
 pytest                      # or: pytest -v
 pytest tests/test_cost_module.py        # cost pipeline only
 pytest -k "anomaly or security"         # security pipeline only
 
-# Frontend — 130 tests, plus lint
+# Frontend — 134 tests, plus lint
 cd frontend
 npm test
 npm run test:watch
@@ -510,10 +521,10 @@ run. Coverage by area:
 | `test_config.py` | 16 | Settings parsing, `.env.example` validity |
 | `test_hardening.py` | 50 | Compression, health latency, API keys, rate limits, CORS, payload shape, task batching |
 | `test_freshness.py` | 36 | The four freshness states, timestamp parsing, malformed input |
-| `test_deployment_security.py` | 74 | No secrets in `/api/health` or logs, rate-limit identity, trusted proxies, scoped CORS, Redis TLS for Celery, dispatch failures, reported model config |
+| `test_deployment_security.py` | 88 | No secrets in `/api/health` or logs, rate-limit identity, trusted proxies, scoped CORS, Redis TLS for Celery, dispatch failures, reported model config, anomaly-injection control |
 
-Frontend (Vitest + Testing Library): `dashboard.test.jsx` 37, `units.test.jsx` 39,
-`palette.test.jsx` 24, `hardening.test.jsx` 21, `landing.test.jsx` 9 — page
+Frontend (Vitest + Testing Library): `dashboard.test.jsx` 39, `units.test.jsx` 39,
+`palette.test.jsx` 25, `hardening.test.jsx` 22, `landing.test.jsx` 9 — page
 states, the API client (including non-JSON responses), charts, the command
 palette, the welcome screen and its routing, and the static hosting config
 (favicon, `vercel.json`, Node pin).
@@ -563,7 +574,9 @@ Prophet fit runs on the worker.
    windows below the decision threshold and a handful of flagged outliers above
    it.
 2. Press **Inject test anomaly**. This appends a genuinely new record to the
-   mocked CloudWatch Logs group and re-runs detection on the worker.
+   mocked CloudWatch Logs group and re-runs detection on the worker. (The button
+   is hidden where `ENVIRONMENT=production`; set `ALLOW_ANOMALY_INJECTION=true`
+   to demo it there.)
 3. The anomaly count rises by one and a new event appears at the top of the feed.
 4. Click the event. The drawer shows *why* it was flagged: which features
    deviated, by how many standard deviations, and what to do about it.
@@ -628,7 +641,7 @@ precision even if it is a genuine statistical outlier.
 | Task submission (`POST /run`) | 50–250 ms, against ~5 s of queued work |
 | Full refresh on the worker | ~5 s (8 resources, 944 cost records, 240 events) |
 | Dashboard payload | 36 KB raw / **7 KB gzipped** (was 108 KB uncompressed) |
-| Frontend entry bundle | 182 KB raw / 59.5 KB gzipped JS + 37 KB / 8.7 KB CSS; the five pages load lazily (4–13 KB raw each) and are prefetched when idle |
+| Frontend entry bundle | 182 KB raw / 59.5 KB gzipped JS + 38 KB / 9 KB CSS + a 32 KB self-hosted font; the five pages load lazily (4–13 KB raw each) and are prefetched when idle |
 
 Every response carries an `X-Process-Time-Ms` header, and the API logs any
 request over 1 s.
@@ -817,7 +830,7 @@ cloudguard/
 │   │       ├── aws.py           boto3 provider
 │   │       ├── moto_setup.py    Mock environment + seeding
 │   │       └── datagen.py       Deterministic demo data
-│   ├── tests/                   329 tests
+│   ├── tests/                   343 tests
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
@@ -830,7 +843,7 @@ cloudguard/
 │   │   ├── charts/              Hand-rolled SVG charts
 │   │   ├── pages/               The five dashboard pages
 │   │   └── index.css            Design system
-│   ├── tests/                   130 tests
+│   ├── tests/                   134 tests
 │   ├── Dockerfile · nginx.conf
 │   ├── vercel.json · .eslintrc.cjs
 │   └── package.json             Node 22.x pinned in "engines"
@@ -879,9 +892,9 @@ Stated plainly, because knowing where the edges are is part of the deliverable.
    forecaster exists for exactly this class of problem.
 7. **Injected demo anomalies persist.** "Inject test anomaly" writes a real event
    into the mocked log group, so repeated presses accumulate. Restart the worker,
-   or call `reset_flow_logs()`, to return to the seeded baseline. On a public
-   deployment with auth off, every visitor shares that state; the per-IP rate
-   limit bounds how fast anyone can add to it.
+   or call `reset_flow_logs()`, to return to the seeded baseline. Because every
+   visitor shares that state, injection is off by default when
+   `ENVIRONMENT=production` (see [Security](#security)).
 8. **Per-client rate limiting needs per-platform setup.** Behind a proxy it
    depends on `FORWARDED_ALLOW_IPS` matching that platform's proxies, which no
    single default can do; until it is set, visitors share one bucket. See

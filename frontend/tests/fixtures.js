@@ -222,6 +222,7 @@ export const dashboardPayload = {
   ],
   pending_task_ids: [],
   degraded: false,
+  features: { anomaly_injection: true },
   freshness: { cached: false, generated_at: '2026-10-01T20:30:00Z', age_seconds: 0, source: 'pipeline', stale: false, state: 'fresh' },
 }
 

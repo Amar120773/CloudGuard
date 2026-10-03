@@ -59,6 +59,9 @@ export function DashboardProvider({ children }) {
       pipelines,
       pipelineByName,
       degraded: Boolean(data?.degraded),
+      // The server decides; a payload without the flag (or not loaded yet)
+      // means no, so the control never appears where it would be refused.
+      canInjectAnomaly: data?.features?.anomaly_injection === true,
       // Pipelines whose cached data is past its freshness threshold, or whose
       // cache expired after a previously successful run.
       stalePipelines: pipelines.filter((p) => p.stale),

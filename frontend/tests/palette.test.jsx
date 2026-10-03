@@ -12,7 +12,7 @@ function jsonResponse(body, status = 200) {
 }
 
 /** Records every POST so tests can assert which action a command fired. */
-function mockApi() {
+function mockApi({ dashboard = dashboardPayload } = {}) {
   const posts = []
   globalThis.fetch = vi.fn(async (url, init) => {
     const path = String(url)
@@ -31,7 +31,7 @@ function mockApi() {
         progress: 100, stage: 'Complete', cache_keys: [],
       })
     }
-    if (path.includes('/api/dashboard')) return jsonResponse(dashboardPayload)
+    if (path.includes('/api/dashboard')) return jsonResponse(dashboard)
     if (path.includes('/api/health')) return jsonResponse(healthPayload)
     if (path.includes('/api/security/events')) {
       return jsonResponse({
@@ -46,6 +46,10 @@ function mockApi() {
 
 /** Open via the keyboard shortcut and wait for the dialog. */
 async function openPalette() {
+  // Which actions are offered depends on the loaded payload (whether the
+  // deployment allows test-anomaly injection), so wait for it first. The
+  // sidebar figure appears once the payload is in, on every page.
+  await screen.findByText('Projected spend')
   fireEvent.keyDown(window, { key: 'k', metaKey: true })
   return screen.findByRole('dialog', { name: /command palette/i })
 }
@@ -281,6 +285,18 @@ describe('Actions', () => {
       const call = posts.find((p) => p.path.includes('/api/security/anomalies/run'))
       expect(call?.body.inject_anomaly).toBe(true)
     })
+  })
+
+  it('leaves out the test-anomaly command where the deployment forbids it', async () => {
+    mockApi({
+      dashboard: { ...dashboardPayload, features: { anomaly_injection: false } },
+    })
+    render(<App />)
+    await screen.findByText('Pipeline status')
+    const dialog = await openPalette()
+
+    expect(within(dialog).getByText('Re-score security events')).toBeInTheDocument()
+    expect(within(dialog).queryByText('Inject test anomaly')).not.toBeInTheDocument()
   })
 
   it('sends force for a retrain', async () => {

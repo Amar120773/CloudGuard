@@ -79,6 +79,15 @@ class PipelineState(CloudGuardModel):
     message: Optional[str] = None
 
 
+class DashboardFeatures(CloudGuardModel):
+    """Demo controls this deployment allows, so the UI only offers working ones."""
+
+    anomaly_injection: bool = Field(
+        False,
+        description="Whether 'Inject test anomaly' is accepted (ALLOW_ANOMALY_INJECTION)",
+    )
+
+
 class DashboardResponse(CloudGuardModel):
     generated_at: datetime
     overview: OverviewMetrics
@@ -100,4 +109,5 @@ class DashboardResponse(CloudGuardModel):
             "that have not run yet are reported via `pipelines`, not here."
         ),
     )
+    features: DashboardFeatures = Field(default_factory=DashboardFeatures)
     freshness: DataFreshness = Field(default_factory=DataFreshness)

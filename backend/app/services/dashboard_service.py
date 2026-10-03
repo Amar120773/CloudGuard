@@ -71,6 +71,7 @@ def build_dashboard() -> Dict[str, Any]:
         # is reported through `pipelines`, so the UI can tell "Redis is down" from
         # "this is a cold start" and offer the right action for each.
         "degraded": cache.degraded,
+        "features": {"anomaly_injection": settings.anomaly_injection_enabled},
         "freshness": {
             "cached": False,
             "generated_at": utcnow(),

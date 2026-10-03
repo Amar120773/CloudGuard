@@ -655,3 +655,59 @@ class TestModelConfigurationIsReported:
         monkeypatch.setattr(settings, "prophet_interval_width", 0.9)
         payload = CostForecaster(horizon_days=14).forecast(cost_records, run_backtest=False)
         assert payload["interval_width"] == 0.9
+
+
+# ==========================================================================
+# Shared demo data: test-anomaly injection
+# ==========================================================================
+class TestAnomalyInjectionControl:
+    @pytest.mark.parametrize(
+        "environment,explicit,expected",
+        [
+            ("production", None, False),  # a public deployment is safe by default
+            ("Production ", None, False),
+            ("development", None, True),  # local demos keep the feature
+            ("test", None, True),
+            ("production", "true", True),  # an explicit choice always wins
+            ("development", "false", False),
+            ("production", "", False),  # a blank dashboard field means unset
+        ],
+    )
+    def test_default_and_overrides(self, monkeypatch, environment, explicit, expected):
+        monkeypatch.setenv("ENVIRONMENT", environment)
+        if explicit is None:
+            monkeypatch.delenv("ALLOW_ANOMALY_INJECTION", raising=False)
+        else:
+            monkeypatch.setenv("ALLOW_ANOMALY_INJECTION", explicit)
+        assert Settings().anomaly_injection_enabled is expected
+
+    @pytest.fixture
+    def injection_off(self, monkeypatch):
+        cache.flush_namespace(Keys.RATE_LIMIT_PREFIX)
+        monkeypatch.setattr(settings, "allow_anomaly_injection", False)
+        monkeypatch.setattr(task_service, "submit", _fake_submit)
+        yield
+        cache.flush_namespace(Keys.RATE_LIMIT_PREFIX)
+
+    @pytest.mark.parametrize("path", ["/api/security/anomalies/run", "/api/security/ingest"])
+    def test_injection_is_refused_when_disabled(self, client, injection_off, path):
+        response = client.post(path, json={"inject_anomaly": True})
+        assert response.status_code == 403
+        assert response.json()["detail"]["error_code"] == "anomaly_injection_disabled"
+
+    @pytest.mark.parametrize("path", ["/api/security/anomalies/run", "/api/security/ingest"])
+    def test_ordinary_runs_still_work_when_disabled(self, client, injection_off, path):
+        assert client.post(path, json={"force": True}).status_code == 202
+
+    def test_injection_is_accepted_when_enabled(self, client, monkeypatch):
+        cache.flush_namespace(Keys.RATE_LIMIT_PREFIX)
+        monkeypatch.setattr(settings, "allow_anomaly_injection", True)
+        monkeypatch.setattr(task_service, "submit", _fake_submit)
+        response = client.post("/api/security/anomalies/run", json={"inject_anomaly": True})
+        assert response.status_code == 202
+
+    @pytest.mark.parametrize("allowed", [True, False])
+    def test_the_dashboard_tells_the_ui(self, client, monkeypatch, allowed):
+        monkeypatch.setattr(settings, "allow_anomaly_injection", allowed)
+        body = client.get("/api/dashboard").json()
+        assert body["features"] == {"anomaly_injection": allowed}

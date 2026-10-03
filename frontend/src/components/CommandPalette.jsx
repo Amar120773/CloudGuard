@@ -26,7 +26,9 @@ const PAGE_COMMANDS = [
  * the palette shows the same progress in the top bar.
  */
 export default function CommandPalette({ open, onClose, onNavigate, currentPage }) {
-  const { runRefresh, runForecast, runAnomalyDetection, isRunning } = useDashboard()
+  const {
+    runRefresh, runForecast, runAnomalyDetection, isRunning, canInjectAnomaly,
+  } = useDashboard()
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
 
@@ -63,7 +65,10 @@ export default function CommandPalette({ open, onClose, onNavigate, currentPage 
         disabled: isRunning,
         run: () => runAnomalyDetection({ force: true }),
       },
-      {
+    ]
+    // Same rule as the Security page button: offered only where allowed.
+    if (canInjectAnomaly) {
+      actions.push({
         id: 'act-inject',
         label: 'Inject test anomaly',
         hint: 'Append an extreme event, then re-score',
@@ -71,8 +76,8 @@ export default function CommandPalette({ open, onClose, onNavigate, currentPage 
         group: 'Actions',
         disabled: isRunning,
         run: () => runAnomalyDetection({ inject_anomaly: true }),
-      },
-    ]
+      })
+    }
 
     const navigation = PAGE_COMMANDS.map((command) => ({
       ...command,
@@ -81,7 +86,7 @@ export default function CommandPalette({ open, onClose, onNavigate, currentPage 
     }))
 
     return [...navigation, ...actions]
-  }, [isRunning, onNavigate, runAnomalyDetection, runForecast, runRefresh])
+  }, [canInjectAnomaly, isRunning, onNavigate, runAnomalyDetection, runForecast, runRefresh])
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase()

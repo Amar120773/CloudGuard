@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from typing import List, Literal
+from typing import List, Literal, Optional
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.connection_urls import with_redis_tls_defaults
@@ -101,6 +101,11 @@ class Settings(BaseSettings):
     cloudguard_api_key: str = ""
     rate_limit_write_requests: int = 10
     rate_limit_window_seconds: int = 60
+    # "Inject test anomaly" appends an event to data every visitor shares, and it
+    # stays until the API restarts. Unset means: allowed everywhere except
+    # ENVIRONMENT=production, so a public deployment is safe with no extra
+    # configuration. Set true or false to decide explicitly.
+    allow_anomaly_injection: Optional[bool] = None
 
     # ------------------------------------------------------------------ aws
     cloud_mode: CloudMode = "moto_inproc"
@@ -134,6 +139,19 @@ class Settings(BaseSettings):
     anomaly_n_estimators: int = 240
     anomaly_random_state: int = 42
     anomaly_score_threshold: float = 65.0
+
+    @field_validator("allow_anomaly_injection", mode="before")
+    @classmethod
+    def _blank_means_unset(cls, value):
+        # A dashboard field left empty arrives as "", which is not a boolean.
+        return None if isinstance(value, str) and not value.strip() else value
+
+    @property
+    def anomaly_injection_enabled(self) -> bool:
+        """Whether callers may inject test anomalies into the shared demo data."""
+        if self.allow_anomaly_injection is not None:
+            return self.allow_anomaly_injection
+        return self.environment.strip().lower() != "production"
 
     @property
     def cors_origins(self) -> List[str]:

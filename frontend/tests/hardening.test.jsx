@@ -295,6 +295,17 @@ describe('Static hosting config', () => {
     expect(config.installCommand).toBe('npm ci')
   })
 
+  it('loads no third-party stylesheet or font', () => {
+    // The typeface ships with the app; a CDN link here would block first paint
+    // on someone else's server and send every visitor's IP to it.
+    const html = readFileSync(frontendFile('index.html'), 'utf8')
+    expect(html).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/)
+    expect(html).not.toMatch(/<link[^>]+rel="stylesheet"[^>]+href="https?:\/\//)
+
+    const entry = readFileSync(frontendFile('src/main.jsx'), 'utf8')
+    expect(entry).toMatch(/@fontsource-variable\/outfit/)
+  })
+
   it('pins the Node major Vite 8 is built and tested on', () => {
     const pkg = JSON.parse(readFileSync(frontendFile('package.json'), 'utf8'))
     expect(pkg.engines?.node).toBe('22.x')

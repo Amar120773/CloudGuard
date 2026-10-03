@@ -24,7 +24,7 @@ const FILTERS = [
 export default function SecurityAnalytics() {
   const {
     security, recentEvents, loading, error, pipelineByName,
-    reload, runAnomalyDetection, isRunning, task,
+    reload, runAnomalyDetection, isRunning, task, canInjectAnomaly,
   } = useDashboard()
 
   const [filter, setFilter] = useState('all')
@@ -152,15 +152,19 @@ export default function SecurityAnalytics() {
             </p>
           </div>
           <div className="panel-actions">
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => runAnomalyDetection({ inject_anomaly: true })}
-              disabled={isRunning}
-              title="Append an extreme synthetic event and re-score, to demonstrate detection"
-            >
-              <Zap size={13} /> Inject test anomaly
-            </button>
+            {/* Only where the deployment allows it: an injected event changes
+                the data every visitor shares. */}
+            {canInjectAnomaly && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => runAnomalyDetection({ inject_anomaly: true })}
+                disabled={isRunning}
+                title="Append an extreme synthetic event and re-score, to demonstrate detection"
+              >
+                <Zap size={13} /> Inject test anomaly
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-primary btn-sm"

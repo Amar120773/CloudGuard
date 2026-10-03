@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, HTTPException, Path, Query, status
 
 from app.api.deps import pipeline_unavailable, submit_task
 from app.api.security_deps import PROTECTED
+from app.config import settings
 from app.logging_config import get_logger
 from app.schemas.security import (
     SecurityEvent,
@@ -18,6 +19,25 @@ from app.workers import tasks
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/security", tags=["security"])
+
+
+def _ensure_injection_allowed(requested: bool) -> None:
+    """Refuse test-anomaly injection where the deployment does not allow it.
+
+    Checked on the server, not just by hiding the button: an injected event
+    lands in data every visitor shares and persists until restart.
+    """
+    if requested and not settings.anomaly_injection_enabled:
+        logger.info("Refused a test-anomaly injection: disabled on this deployment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "detail": "Injecting test anomalies is turned off on this deployment.",
+                "error_code": "anomaly_injection_disabled",
+                "hint": "Every visitor shares this demo's data, so test anomalies can "
+                "only be injected where ALLOW_ANOMALY_INJECTION is enabled.",
+            },
+        )
 
 
 @router.get(
@@ -113,6 +133,7 @@ def run_anomaly_detection(
     body: RunTaskRequest = Body(default_factory=RunTaskRequest),
 ) -> TaskSubmission:
     """Queue detection. `inject_anomaly` seeds a live outlier for the demo."""
+    _ensure_injection_allowed(body.inject_anomaly)
     return submit_task(
         TaskType.RUN_ANOMALY,
         tasks.run_anomaly_detection,
@@ -134,6 +155,7 @@ def run_anomaly_detection(
 def ingest_security(
     body: RunTaskRequest = Body(default_factory=RunTaskRequest),
 ) -> TaskSubmission:
+    _ensure_injection_allowed(body.inject_anomaly)
     return submit_task(
         TaskType.INGEST_SECURITY,
         tasks.ingest_security_events,

@@ -366,6 +366,22 @@ describe('Security Analytics', () => {
     expect(screen.getByText(/decision threshold 65/)).toBeInTheDocument()
   })
 
+  it('offers test-anomaly injection where the deployment allows it', async () => {
+    mockApi()
+    renderPage(<SecurityAnalytics />)
+    expect(await screen.findByRole('button', { name: /inject test anomaly/i })).toBeInTheDocument()
+  })
+
+  it('hides test-anomaly injection on a public deployment', async () => {
+    mockApi({
+      dashboard: { ...dashboardPayload, features: { anomaly_injection: false } },
+    })
+    renderPage(<SecurityAnalytics />)
+
+    expect(await screen.findByRole('button', { name: /re-score/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /inject test anomaly/i })).not.toBeInTheDocument()
+  })
+
   it('draws the threshold the detector applied, not a default', async () => {
     mockApi({
       dashboard: {
