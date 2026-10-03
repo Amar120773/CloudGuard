@@ -58,7 +58,9 @@ const renderPage = (ui) => render(<DashboardProvider>{ui}</DashboardProvider>)
 
 beforeEach(() => {
   vi.restoreAllMocks()
-  window.location.hash = ''
+  // These suites exercise the dashboard shell, which opens behind the welcome
+  // screen; start on the dashboard itself (tests/landing.test.jsx covers the rest).
+  window.location.hash = '#/overview'
 })
 
 // ==========================================================================
@@ -143,7 +145,7 @@ describe('Spend sparkline', () => {
 
 // ==========================================================================
 describe('Lazy-loaded routes', () => {
-  it('renders the default route after its chunk resolves', async () => {
+  it('renders the Overview route after its chunk resolves', async () => {
     mockApi()
     render(<App />)
     expect(await screen.findByText('Pipeline status')).toBeInTheDocument()

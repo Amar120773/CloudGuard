@@ -31,13 +31,14 @@ export function Sidebar({ page, onNavigate, open, onClose }) {
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Main navigation">
-      <div className="brand">
+      {/* The logo leads back to the welcome screen (an empty hash). */}
+      <a href="#/" className="brand" title="Back to the welcome screen">
         <span className="brand-mark"><Cloud size={19} /></span>
         <span className="brand-text">
           <span className="brand-name">CloudGuard</span>
           <span className="brand-sub">Cloud Intelligence</span>
         </span>
-      </div>
+      </a>
 
       <nav className="nav">
         <span className="nav-label">Analysis</span>

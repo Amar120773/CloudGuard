@@ -279,10 +279,11 @@ whatever happened to be in the current batch.
 
 ## Dashboard
 
-Five pages, dark theme, responsive to phone width.
+A welcome screen, then five pages; dark theme, responsive to phone width.
 
 | Page | What it shows |
 |---|---|
+| **Welcome** (`/`) | Animated radar-and-orbit hero, live headline figures once the pipelines have run, **Enter dashboard** (or press Enter). It pings the API on arrival, so a sleeping free-tier host wakes while the visitor reads. Deep links such as `#/cost` skip it; the sidebar logo returns to it. |
 | **Overview** | Headline tiles, spend trajectory, live event feed, service spend, top insight, per-pipeline status |
 | **Cost Intelligence** | Forecast chart with confidence band, month-end projection, budget position, backtest accuracy, per-service table |
 | **Security Analytics** | Anomaly timeline with decision threshold, filterable event feed, detail drawer with feature deviations |
@@ -292,8 +293,14 @@ Five pages, dark theme, responsive to phone width.
 ### Visualisation decisions
 
 Charts are hand-rolled SVG — no chart library — which keeps the entry bundle at
-**~65 KB gzipped** (57.9 KB of JavaScript plus 6.7 KB of CSS) and gives exact
+**~68 KB gzipped** (59.5 KB of JavaScript plus 8.7 KB of CSS) and gives exact
 control over the marks.
+
+Motion is CSS only and animates `transform` and `opacity`, so it stays on the
+compositor: the welcome screen's sweep and orbits, its exit into the dashboard,
+and a short fade as each page arrives. Page chunks are prefetched when the
+browser is idle, so navigating never flashes a loading skeleton. Everything
+honours `prefers-reduced-motion`.
 
 - **Series colours are validated for colour-vision deficiency.** Observed spend
   (blue `#3987e5`) against forecast (orange `#d95926`) measures ΔE 26.8 under
@@ -482,7 +489,7 @@ pytest                      # or: pytest -v
 pytest tests/test_cost_module.py        # cost pipeline only
 pytest -k "anomaly or security"         # security pipeline only
 
-# Frontend — 121 tests, plus lint
+# Frontend — 130 tests, plus lint
 cd frontend
 npm test
 npm run test:watch
@@ -506,9 +513,10 @@ run. Coverage by area:
 | `test_deployment_security.py` | 74 | No secrets in `/api/health` or logs, rate-limit identity, trusted proxies, scoped CORS, Redis TLS for Celery, dispatch failures, reported model config |
 
 Frontend (Vitest + Testing Library): `dashboard.test.jsx` 37, `units.test.jsx` 39,
-`palette.test.jsx` 24, `hardening.test.jsx` 21 — page states, the API client
-(including non-JSON responses), charts, the command palette, and the static
-hosting config (favicon, `vercel.json`, Node pin).
+`palette.test.jsx` 24, `hardening.test.jsx` 21, `landing.test.jsx` 9 — page
+states, the API client (including non-JSON responses), charts, the command
+palette, the welcome screen and its routing, and the static hosting config
+(favicon, `vercel.json`, Node pin).
 
 Notable cases, because they encode the claims this project makes:
 
@@ -620,7 +628,7 @@ precision even if it is a genuine statistical outlier.
 | Task submission (`POST /run`) | 50–250 ms, against ~5 s of queued work |
 | Full refresh on the worker | ~5 s (8 resources, 944 cost records, 240 events) |
 | Dashboard payload | 36 KB raw / **7 KB gzipped** (was 108 KB uncompressed) |
-| Frontend entry bundle | 176 KB raw / 58 KB gzipped JS + 28 KB / 7 KB CSS; the five pages load lazily (4–13 KB raw each) |
+| Frontend entry bundle | 182 KB raw / 59.5 KB gzipped JS + 37 KB / 8.7 KB CSS; the five pages load lazily (4–13 KB raw each) and are prefetched when idle |
 
 Every response carries an `X-Process-Time-Ms` header, and the API logs any
 request over 1 s.
@@ -822,7 +830,7 @@ cloudguard/
 │   │   ├── charts/              Hand-rolled SVG charts
 │   │   ├── pages/               The five dashboard pages
 │   │   └── index.css            Design system
-│   ├── tests/                   121 tests
+│   ├── tests/                   130 tests
 │   ├── Dockerfile · nginx.conf
 │   ├── vercel.json · .eslintrc.cjs
 │   └── package.json             Node 22.x pinned in "engines"

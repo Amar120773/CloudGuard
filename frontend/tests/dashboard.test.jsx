@@ -63,7 +63,9 @@ function renderPage(ui) {
 
 beforeEach(() => {
   vi.restoreAllMocks()
-  window.location.hash = ''
+  // These suites exercise the dashboard shell, which opens behind the welcome
+  // screen; start on the dashboard itself (tests/landing.test.jsx covers the rest).
+  window.location.hash = '#/overview'
 })
 
 // ==========================================================================
@@ -418,7 +420,7 @@ describe('AI Insights', () => {
 
 // ==========================================================================
 describe('App shell', () => {
-  it('renders navigation and the default page', async () => {
+  it('renders navigation and the Overview page', async () => {
     mockApi()
     render(<App />)
 
