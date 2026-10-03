@@ -23,7 +23,18 @@ export const PAGES = [
     blurb: 'What the models found, in plain language' },
 ]
 
-export function Sidebar({ page, onNavigate, open, onClose }) {
+/**
+ * A plain left click navigates in place. Anything else (Ctrl/⌘/Shift-click,
+ * middle click) keeps its browser meaning, so a page opens in a new tab.
+ */
+function followInApp(event, go) {
+  if (event.defaultPrevented || event.button !== 0) return
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  go()
+}
+
+export function Sidebar({ page, onNavigate, onHome, open, onClose }) {
   const { overview, health, degraded, standalone } = useDashboard()
   const anomalies = overview?.anomaly_count || 0
 
@@ -31,8 +42,13 @@ export function Sidebar({ page, onNavigate, open, onClose }) {
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Main navigation">
-      {/* The logo leads back to the welcome screen (an empty hash). */}
-      <a href="#/" className="brand" title="Back to the welcome screen">
+      {/* The logo leads back to the welcome screen at the root path. */}
+      <a
+        href="/"
+        className="brand"
+        title="Back to the welcome screen"
+        onClick={(event) => followInApp(event, () => onHome?.())}
+      >
         <span className="brand-mark"><Cloud size={19} /></span>
         <span className="brand-text">
           <span className="brand-name">CloudGuard</span>
@@ -42,20 +58,21 @@ export function Sidebar({ page, onNavigate, open, onClose }) {
 
       <nav className="nav">
         <span className="nav-label">Analysis</span>
+        {/* Real links: each section is a page with its own address. */}
         {PAGES.map(({ id, label, icon: Icon }) => (
-          <button
+          <a
             key={id}
-            type="button"
+            href={`/${id}`}
             className="nav-item"
             aria-current={page === id ? 'page' : undefined}
-            onClick={() => { onNavigate(id); onClose?.() }}
+            onClick={(event) => followInApp(event, () => { onNavigate(id); onClose?.() })}
           >
             <Icon size={16} aria-hidden="true" />
             {label}
             {id === 'security' && anomalies > 0 && (
               <span className="nav-count">{anomalies}</span>
             )}
-          </button>
+          </a>
         ))}
       </nav>
 

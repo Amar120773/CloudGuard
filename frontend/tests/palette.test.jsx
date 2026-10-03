@@ -54,11 +54,14 @@ async function openPalette() {
   return screen.findByRole('dialog', { name: /command palette/i })
 }
 
+// A route's chunk loads lazily; a cold transform can outlast the 1s default.
+const LAZY_PAGE = { timeout: 3000 }
+
 beforeEach(() => {
   vi.restoreAllMocks()
   // These suites exercise the dashboard shell, which opens behind the welcome
   // screen; start on the dashboard itself (tests/landing.test.jsx covers the rest).
-  window.location.hash = '#/overview'
+  window.history.replaceState(null, '', '/overview')
 })
 
 // ==========================================================================
@@ -250,8 +253,8 @@ describe('Keyboard navigation', () => {
     fireEvent.keyDown(dialog, { key: 'ArrowDown' })   // Cost Intelligence
     fireEvent.keyDown(dialog, { key: 'Enter' })
 
-    expect(await screen.findByText('Historical spend and forecast')).toBeInTheDocument()
-    expect(window.location.hash).toBe('#/cost')
+    expect(await screen.findByText('Historical spend and forecast', {}, LAZY_PAGE)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/cost')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

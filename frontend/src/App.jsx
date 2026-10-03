@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 
 import CommandPalette, { useCommandPalette } from './components/CommandPalette'
 import { ChartSkeleton } from './components/Primitives'
-import { MobileScrim, Sidebar, TopBar } from './components/Shell'
+import { MobileScrim, PAGES, Sidebar, TopBar } from './components/Shell'
 // Eager, not lazy: the welcome screen is the first paint, and a loading
 // fallback in front of it would defeat the point of having one.
 import Landing from './pages/Landing'
@@ -25,12 +25,26 @@ const AiInsights = lazy(PAGE_LOADERS.insights)
 
 const HOME = 'home'
 const VALID_PAGES = Object.keys(PAGE_LOADERS)
+// Read once: the welcome screen keeps the document's own title.
+const HOME_TITLE = document.title
 
-/** No hash is the welcome screen; any other hash is a dashboard page. */
-function pageFromHash() {
-  const hash = window.location.hash.replace('#/', '').replace('#', '')
-  if (!hash) return HOME
-  return VALID_PAGES.includes(hash) ? hash : 'overview'
+/** "/" is the welcome screen; every dashboard section is a page at its own path. */
+function pathFor(page) {
+  return page === HOME ? '/' : `/${page}`
+}
+
+function pageFromLocation() {
+  // Links shared before sections had their own paths (#/cost) still land on
+  // the right page; the address is then rewritten to the path form.
+  const legacy = window.location.hash.replace(/^#\/?/, '')
+  const path = legacy || window.location.pathname.replace(/^\/+|\/+$/g, '')
+  if (!path) return HOME
+  return VALID_PAGES.includes(path) ? path : 'overview'
+}
+
+function titleFor(page) {
+  const meta = PAGES.find((p) => p.id === page)
+  return meta ? `${meta.title} · CloudGuard` : HOME_TITLE
 }
 
 /**
@@ -62,7 +76,7 @@ function PageFallback() {
   )
 }
 
-function Shell({ page, onNavigate }) {
+function Shell({ page, onNavigate, onHome }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { open: paletteOpen, openPalette, closePalette } = useCommandPalette()
 
@@ -73,6 +87,7 @@ function Shell({ page, onNavigate }) {
       <Sidebar
         page={page}
         onNavigate={onNavigate}
+        onHome={onHome}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
       />
@@ -109,20 +124,33 @@ function Shell({ page, onNavigate }) {
 }
 
 /**
- * Hash routing keeps the app a single static bundle (no router dependency, no
- * server rewrite rules) while still giving each view a shareable URL.
+ * Each section is a real page: its own path, title and history entry, so it
+ * can be bookmarked, opened in a new tab and reached with Back. The History
+ * API does this without a router dependency; the static hosts rewrite page
+ * paths to index.html (vercel.json, nginx.conf).
  */
 export default function App() {
-  const [page, setPage] = useState(pageFromHash)
+  const [page, setPage] = useState(pageFromLocation)
 
   useEffect(() => {
-    const onHashChange = () => setPage(pageFromHash())
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
+    // One address per page: legacy hash links and unknown paths are rewritten.
+    const canonical = pathFor(pageFromLocation())
+    if (window.location.pathname !== canonical || window.location.hash) {
+      window.history.replaceState(null, '', canonical + window.location.search)
+    }
+
+    const onPopState = () => setPage(pageFromLocation())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
+  useEffect(() => {
+    document.title = titleFor(page)
+  }, [page])
+
   const navigate = useCallback((next) => {
-    window.location.hash = next === HOME ? '#/' : `#/${next}`
+    const path = pathFor(next)
+    if (window.location.pathname !== path) window.history.pushState(null, '', path)
     setPage(next)
     // Instant, not smooth: the new page animates in on its own, and scrolling
     // smoothly across content that is being replaced reads as a jolt.
@@ -135,7 +163,7 @@ export default function App() {
     <DashboardProvider>
       {page === HOME
         ? <Landing onEnter={() => navigate('overview')} />
-        : <Shell page={page} onNavigate={navigate} />}
+        : <Shell page={page} onNavigate={navigate} onHome={() => navigate(HOME)} />}
     </DashboardProvider>
   )
 }

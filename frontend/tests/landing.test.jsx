@@ -1,17 +1,19 @@
 /**
  * The welcome screen: shown at the root URL, entered on request, skipped by
- * deep links, and used to wake a sleeping API before the visitor clicks in.
+ * deep links, used to wake a sleeping API before the visitor clicks in, and
+ * honest about a deployment that cannot reach the API at all.
  */
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../src/App'
 import { coldDashboardPayload, dashboardPayload, healthPayload } from './fixtures'
 
 // The exit animation runs before the dashboard takes over.
 const AFTER_EXIT = { timeout: 3000 }
+const HEADLINE = 'See the cloud bill and the breach before they hit.'
 
 function jsonResponse(body, status = 200) {
   return { ok: status >= 200 && status < 300, status, text: async () => JSON.stringify(body) }
@@ -32,10 +34,18 @@ function mockApi({ dashboard = dashboardPayload, healthDown = false } = {}) {
 }
 
 const enterButton = () => screen.getByRole('button', { name: /enter dashboard/i })
+const liveScan = (container) => container.querySelector('.live-scan')
+
+// A route's chunk loads lazily; a cold transform can outlast the 1s default.
+const LAZY_PAGE = { timeout: 3000 }
 
 beforeEach(() => {
   vi.restoreAllMocks()
-  window.location.hash = ''
+  window.history.replaceState(null, '', '/')
+})
+
+afterEach(() => {
+  delete window.matchMedia
 })
 
 // ==========================================================================
@@ -44,7 +54,7 @@ describe('Welcome screen', () => {
     mockApi()
     render(<App />)
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/forecast and defended/i)
+    expect(screen.getByRole('heading', { level: 1, name: HEADLINE })).toBeInTheDocument()
     expect(enterButton()).toBeInTheDocument()
     // The dashboard shell has not been rendered yet.
     expect(screen.queryByRole('navigation', { name: /main navigation/i })).not.toBeInTheDocument()
@@ -59,7 +69,8 @@ describe('Welcome screen', () => {
     await user.click(enterButton())
 
     expect(await screen.findByText('Pipeline status', {}, AFTER_EXIT)).toBeInTheDocument()
-    expect(window.location.hash).toBe('#/overview')
+    expect(window.location.pathname).toBe('/overview')
+    expect(document.title).toBe('Overview · CloudGuard')
     expect(screen.queryByRole('button', { name: /enter dashboard/i })).not.toBeInTheDocument()
   })
 
@@ -75,17 +86,17 @@ describe('Welcome screen', () => {
   })
 
   it('lets deep links skip it', async () => {
-    window.location.hash = '#/cost'
+    window.history.replaceState(null, '', '/cost')
     mockApi()
     render(<App />)
 
-    expect(await screen.findByText('Historical spend and forecast')).toBeInTheDocument()
+    expect(await screen.findByText('Historical spend and forecast', {}, LAZY_PAGE)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /enter dashboard/i })).not.toBeInTheDocument()
   })
 
   it('is one click away from the dashboard via the logo', async () => {
     const user = userEvent.setup()
-    window.location.hash = '#/overview'
+    window.history.replaceState(null, '', '/overview')
     mockApi()
     render(<App />)
 
@@ -93,6 +104,49 @@ describe('Welcome screen', () => {
     await user.click(screen.getByRole('link', { name: /cloudguard/i }))
 
     await waitFor(() => expect(enterButton()).toBeInTheDocument())
+    expect(window.location.pathname).toBe('/')
+  })
+})
+
+// ==========================================================================
+describe('Dashboard sections are pages', () => {
+  it('gives each section its own address and title, and Back returns', async () => {
+    const user = userEvent.setup()
+    window.history.replaceState(null, '', '/overview')
+    mockApi()
+    render(<App />)
+    await screen.findByText('Pipeline status')
+
+    const costLink = screen.getByRole('link', { name: /Cost Intelligence/ })
+    expect(costLink).toHaveAttribute('href', '/cost')
+    await user.click(costLink)
+
+    expect(await screen.findByText('Historical spend and forecast', {}, LAZY_PAGE)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/cost')
+    expect(document.title).toBe('Cost Intelligence · CloudGuard')
+
+    act(() => window.history.back())
+    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    await waitFor(() => expect(window.location.pathname).toBe('/overview'))
+  })
+
+  it('still opens the right page from an old #/ link, at its new address', async () => {
+    window.history.replaceState(null, '', '/#/security')
+    mockApi()
+    render(<App />)
+
+    expect(await screen.findByText('Anomaly score over time', {}, LAZY_PAGE)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/security')
+    expect(window.location.hash).toBe('')
+  })
+
+  it('sends an unknown path to the Overview page', async () => {
+    window.history.replaceState(null, '', '/nope')
+    mockApi()
+    render(<App />)
+
+    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/overview')
   })
 })
 
@@ -112,6 +166,37 @@ describe('Welcome screen API status', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/waking the analysis engine/i)
     // Entering is never blocked on it.
     expect(enterButton()).toBeEnabled()
+  })
+
+  it('reports a site that is not pointed at the API instead of waking', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // A static host answering /api/health: VITE_API_BASE_URL missing or wrong.
+    globalThis.fetch = vi.fn(async () => ({ ok: false, status: 404, text: async () => 'Not Found' }))
+    render(<App />)
+
+    expect(await screen.findByText('Analysis engine not connected to this site')).toBeInTheDocument()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('VITE_API_BASE_URL'))
+    expect(enterButton()).toBeEnabled()
+  })
+
+  it('reports an API that answers but refuses this site, once it outlasts a cold start', async () => {
+    vi.useFakeTimers()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // CORS: the readable request fails, but an opaque probe gets an answer.
+    globalThis.fetch = vi.fn(async (url, init) => {
+      if (init?.mode === 'no-cors') return { ok: false, status: 0, type: 'opaque' }
+      throw new TypeError('Failed to fetch')
+    })
+    render(<App />)
+
+    // A waking server's interstitial looks the same at first, so keep waiting...
+    await act(() => vi.advanceTimersByTimeAsync(20000))
+    expect(screen.getByRole('status')).toHaveTextContent(/waking the analysis engine/i)
+
+    // ...but not for the full give-up window.
+    await act(() => vi.advanceTimersByTimeAsync(50000))
+    expect(screen.getByRole('status')).toHaveTextContent('Analysis engine is refusing this site')
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('CORS_ORIGINS'))
   })
 })
 
@@ -134,5 +219,71 @@ describe('Welcome screen figures', () => {
     expect(screen.getByText(/IsolationForest flags behaviour/)).toBeInTheDocument()
     // No invented numbers while nothing has run.
     expect(screen.queryByText(/projected for month end/)).not.toBeInTheDocument()
+  })
+})
+
+// ==========================================================================
+describe('Live scan', () => {
+  it('is labelled an example, with no figures, until the pipelines have run', async () => {
+    mockApi({ dashboard: coldDashboardPayload })
+    const { container } = render(<App />)
+    await screen.findByText(/Prophet forecasts month-end spend/)
+
+    const scan = within(liveScan(container))
+    expect(scan.getByText('Example')).toBeInTheDocument()
+    expect(scan.getByText('Over budget before month end')).toBeInTheDocument()
+    // Event names the detector really emits, but no sources or dollar amounts.
+    expect(scan.getByText('Authentication failure burst')).toBeInTheDocument()
+    expect(liveScan(container).textContent).not.toMatch(/\$\d/)
+    expect(liveScan(container).textContent).not.toMatch(/eni-/)
+  })
+
+  it('replays real pipeline output once it exists', async () => {
+    mockApi()
+    const { container } = render(<App />)
+
+    const scan = within(liveScan(container))
+    expect(await scan.findByText('Live')).toBeInTheDocument()
+    expect(scan.getByText('$14,641')).toBeInTheDocument()
+    // headroom is -641.14 in the payload: the forecast lands over budget.
+    expect(scan.getByText('$641 over budget by month end')).toBeInTheDocument()
+    expect(scan.getByText('eni-live0001')).toBeInTheDocument()
+    expect(scan.getByText('5 flagged')).toBeInTheDocument()
+  })
+
+  it('is decorative for assistive tech', async () => {
+    mockApi()
+    const { container } = render(<App />)
+
+    expect(liveScan(container).closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+})
+
+// ==========================================================================
+describe('Headline decode', () => {
+  it('scrambles in behind an aria-hidden overlay, then leaves only the words', async () => {
+    mockApi()
+    const { container } = render(<App />)
+
+    // The accessible name is whole from the first frame.
+    expect(screen.getByRole('heading', { level: 1, name: HEADLINE })).toBeInTheDocument()
+    expect(container.querySelector('.decode-overlay')).toHaveAttribute('aria-hidden', 'true')
+
+    await waitFor(
+      () => expect(container.querySelector('.decode-overlay')).toBeNull(),
+      { timeout: 3000 },
+    )
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(HEADLINE)
+  })
+
+  it('renders the finished words at once for reduced motion', () => {
+    window.matchMedia = vi.fn(() => ({
+      matches: true, addEventListener() {}, removeEventListener() {},
+    }))
+    mockApi()
+    const { container } = render(<App />)
+
+    expect(container.querySelector('.decode-overlay')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(HEADLINE)
   })
 })

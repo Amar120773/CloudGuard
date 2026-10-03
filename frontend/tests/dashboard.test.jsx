@@ -62,11 +62,14 @@ function renderPage(ui) {
   return render(<DashboardProvider>{ui}</DashboardProvider>)
 }
 
+// A route's chunk loads lazily; a cold transform can outlast the 1s default.
+const LAZY_PAGE = { timeout: 3000 }
+
 beforeEach(() => {
   vi.restoreAllMocks()
   // These suites exercise the dashboard shell, which opens behind the welcome
   // screen; start on the dashboard itself (tests/landing.test.jsx covers the rest).
-  window.location.hash = '#/overview'
+  window.history.replaceState(null, '', '/overview')
 })
 
 // ==========================================================================
@@ -499,7 +502,7 @@ describe('App shell', () => {
     render(<App />)
 
     expect(await screen.findByText('CloudGuard')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Overview$/ })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: /^Overview$/ })).toHaveAttribute('aria-current', 'page')
   })
 
   it('navigates between pages', async () => {
@@ -508,10 +511,10 @@ describe('App shell', () => {
     render(<App />)
 
     await screen.findByText('CloudGuard')
-    await user.click(screen.getByRole('button', { name: /Cost Intelligence/ }))
+    await user.click(screen.getByRole('link', { name: /Cost Intelligence/ }))
 
-    expect(await screen.findByText('Historical spend and forecast')).toBeInTheDocument()
-    expect(window.location.hash).toBe('#/cost')
+    expect(await screen.findByText('Historical spend and forecast', {}, LAZY_PAGE)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/cost')
   })
 
   it('shows dependency health in the sidebar', async () => {
@@ -544,8 +547,8 @@ describe('App shell', () => {
     mockApi()
     render(<App />)
 
-    const navButton = await screen.findByRole('button', { name: /Security Analytics/ })
-    expect(within(navButton).getByText('5')).toBeInTheDocument()
+    const navLink = await screen.findByRole('link', { name: /Security Analytics/ })
+    expect(within(navLink).getByText('5')).toBeInTheDocument()
   })
 })
 

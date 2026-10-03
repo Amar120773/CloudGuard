@@ -159,6 +159,33 @@ export async function request(path, { method = 'GET', body, signal, timeoutMs = 
   }
 }
 
+/**
+ * Whether anything at the API address answers at all.
+ *
+ * A request the browser refuses on CORS grounds fails exactly like one to a
+ * host that is down. An opaque `no-cors` request tells them apart: it succeeds
+ * whenever the server responds, because the browser never has to expose the
+ * response. So a failed request plus a successful probe means "up, but not
+ * allowing this origin" - a configuration problem, not a cold start.
+ */
+export async function apiHostAnswers({ timeoutMs = 8000 } = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    await fetch(`${BASE_URL}/api/health`, { mode: 'no-cors', signal: controller.signal })
+    return true
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** An http:// API behind an https:// page is blocked by the browser outright. */
+export function apiIsMixedContent() {
+  return window.location.protocol === 'https:' && BASE_URL.startsWith('http://')
+}
+
 export const api = {
   baseUrl: BASE_URL,
 

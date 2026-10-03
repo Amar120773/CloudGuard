@@ -722,10 +722,13 @@ Create a **second** Vercel project from the same repo:
 
 `VITE_API_BASE_URL` is read at **build** time, so changing it requires a
 redeploy, not just a settings save. If it is missing or wrong, `/api/*` requests
-reach the static host itself. There is deliberately no SPA fallback rewrite (the
-app routes with the URL hash, so it needs none), so they fail visibly — a 404,
-or "Unexpected response from the API" if something answers with an HTML page —
-instead of the dashboard waiting forever.
+reach the static host itself. Each dashboard section is a page at its own path
+(`/overview`, `/cost`, `/security`, `/resources`, `/insights`), so `vercel.json`
+rewrites page paths to `index.html` — but deliberately not `/api/*`, so those
+requests fail visibly with a 404 instead of the dashboard waiting forever. The
+welcome screen reads that 404 (or an HTML answer) as "not connected" within a
+few seconds, and a CORS refusal as "refusing this site", rather than showing
+"Waking…" for minutes; the browser console names the setting to fix.
 
 Then allow the Vercel origins on the API:
 

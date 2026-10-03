@@ -56,11 +56,14 @@ function mockApi({ dashboard = dashboardPayload } = {}) {
 
 const renderPage = (ui) => render(<DashboardProvider>{ui}</DashboardProvider>)
 
+// A route's chunk loads lazily; a cold transform can outlast the 1s default.
+const LAZY_PAGE = { timeout: 3000 }
+
 beforeEach(() => {
   vi.restoreAllMocks()
   // These suites exercise the dashboard shell, which opens behind the welcome
   // screen; start on the dashboard itself (tests/landing.test.jsx covers the rest).
-  window.location.hash = '#/overview'
+  window.history.replaceState(null, '', '/overview')
 })
 
 // ==========================================================================
@@ -171,8 +174,8 @@ describe('Lazy-loaded routes', () => {
       [/AI Insights/, /Each insight pairs/],
       [/Overview/, 'Pipeline status'],
     ]) {
-      await user.click(screen.getByRole('button', { name: label }))
-      expect(await screen.findByText(marker)).toBeInTheDocument()
+      await user.click(screen.getByRole('link', { name: label }))
+      expect(await screen.findByText(marker, {}, LAZY_PAGE)).toBeInTheDocument()
       // The shell persists across lazy boundaries.
       expect(screen.getByText('CloudGuard')).toBeInTheDocument()
     }
@@ -181,7 +184,7 @@ describe('Lazy-loaded routes', () => {
   it('keeps the sidebar interactive while a route loads', async () => {
     mockApi()
     render(<App />)
-    expect(await screen.findByRole('button', { name: /Cost Intelligence/ })).toBeEnabled()
+    expect(await screen.findByRole('link', { name: /Cost Intelligence/ })).toHaveAttribute('href', '/cost')
   })
 })
 
