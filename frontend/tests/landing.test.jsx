@@ -4,7 +4,7 @@
  * honest about a deployment that cannot reach the API at all.
  */
 import React from 'react'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -34,7 +34,6 @@ function mockApi({ dashboard = dashboardPayload, healthDown = false } = {}) {
 }
 
 const enterButton = () => screen.getByRole('button', { name: /enter dashboard/i })
-const liveScan = (container) => container.querySelector('.live-scan')
 
 // A route's chunk loads lazily; a cold transform can outlast the 1s default.
 const LAZY_PAGE = { timeout: 3000 }
@@ -255,43 +254,6 @@ describe('Welcome screen figures', () => {
     expect(screen.getByText(/IsolationForest flags behaviour/)).toBeInTheDocument()
     // No invented numbers while nothing has run.
     expect(screen.queryByText(/projected for month end/)).not.toBeInTheDocument()
-  })
-})
-
-// ==========================================================================
-describe('Live scan', () => {
-  it('is labelled an example, with no figures, until the pipelines have run', async () => {
-    mockApi({ dashboard: coldDashboardPayload })
-    const { container } = render(<App />)
-    await screen.findByText(/Prophet forecasts month-end spend/)
-
-    const scan = within(liveScan(container))
-    expect(scan.getByText('Example')).toBeInTheDocument()
-    expect(scan.getByText('Over budget before month end')).toBeInTheDocument()
-    // Event names the detector really emits, but no sources or dollar amounts.
-    expect(scan.getByText('Authentication failure burst')).toBeInTheDocument()
-    expect(liveScan(container).textContent).not.toMatch(/\$\d/)
-    expect(liveScan(container).textContent).not.toMatch(/eni-/)
-  })
-
-  it('replays real pipeline output once it exists', async () => {
-    mockApi()
-    const { container } = render(<App />)
-
-    const scan = within(liveScan(container))
-    expect(await scan.findByText('Live')).toBeInTheDocument()
-    expect(scan.getByText('$14,641')).toBeInTheDocument()
-    // headroom is -641.14 in the payload: the forecast lands over budget.
-    expect(scan.getByText('$641 over budget by month end')).toBeInTheDocument()
-    expect(scan.getByText('eni-live0001')).toBeInTheDocument()
-    expect(scan.getByText('5 flagged')).toBeInTheDocument()
-  })
-
-  it('is decorative for assistive tech', async () => {
-    mockApi()
-    const { container } = render(<App />)
-
-    expect(liveScan(container).closest('[aria-hidden="true"]')).not.toBeNull()
   })
 })
 

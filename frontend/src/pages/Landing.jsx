@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Cloud, CornerDownLeft, Radar, Server, TrendingUp,
+  ArrowRight, Cloud, CornerDownLeft, Radar, Server, ShieldCheck, TrendingUp,
 } from 'lucide-react'
 
 import { api, apiHostAnswers, apiIsMixedContent } from '../api/client'
-import LiveScan from '../components/LiveScan'
 import { useDashboard } from '../state/DashboardContext'
 import { money } from '../utils/format'
 import { prefersReducedMotion } from '../utils/motion'
@@ -225,9 +224,7 @@ function DecodeText({ text, delay = 0 }) {
 }
 
 export default function Landing({ onEnter }) {
-  const {
-    overview, forecast, security, recentEvents, pipelineByName, reload,
-  } = useDashboard()
+  const { overview, pipelineByName, reload } = useDashboard()
   const [leaving, setLeaving] = useState(false)
   // A ref, not the state: the button and the page-wide Enter key can both fire
   // in one event, before a state update would be visible to the second.
@@ -341,7 +338,6 @@ export default function Landing({ onEnter }) {
         </section>
 
         <div className="landing-visual lp-reveal" style={{ '--d': '0.2s' }} aria-hidden="true">
-          {/* The radar now rings the live scan: it sweeps around the console. */}
           <div className="orbit">
             <div className="orbit-glow" />
             <div className="orbit-sweep" />
@@ -355,12 +351,12 @@ export default function Landing({ onEnter }) {
               <span className="orbit-node n2" />
               <span className="orbit-node n3" />
             </div>
+            <span className="orbit-ping p1" />
+            <span className="orbit-ping p2" />
+            <div className="orbit-core">
+              <ShieldCheck size={34} strokeWidth={1.6} />
+            </div>
           </div>
-          <LiveScan
-            forecast={forecastReady ? forecast : null}
-            security={securityReady ? security : null}
-            events={securityReady ? recentEvents : null}
-          />
         </div>
       </main>
 
