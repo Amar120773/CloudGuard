@@ -185,8 +185,9 @@ export default function CostIntelligence() {
                   <thead>
                     <tr>
                       <th>Service</th>
-                      <th className="num">Total</th>
-                      <th className="num">Daily avg</th>
+                      {/* Hidden on phones: the bars above already show each amount. */}
+                      <th className="num col-optional">Total</th>
+                      <th className="num col-optional">Daily avg</th>
                       <th className="num">Trend</th>
                       <th className="num">Projected</th>
                       <th>Risk</th>
@@ -196,8 +197,8 @@ export default function CostIntelligence() {
                     {serviceRows.map((service) => (
                       <tr key={service.service}>
                         <td style={{ fontWeight: 550 }}>{shortService(service.service)}</td>
-                        <td className="num">{money(service.total_cost)}</td>
-                        <td className="num">{money(service.daily_average, { decimals: 2 })}</td>
+                        <td className="num col-optional">{money(service.total_cost)}</td>
+                        <td className="num col-optional">{money(service.daily_average, { decimals: 2 })}</td>
                         <td className="num"><Delta value={service.trend_pct} /></td>
                         <td className="num">
                           {service.projected_month_end != null

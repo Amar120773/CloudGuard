@@ -156,32 +156,29 @@ export function TopBar({ page, onToggleMenu, onOpenPalette }) {
         {/* A refused submission (rate limit, broker fault) must not fail silently. */}
         {!isRunning && taskError && (
           <span
+            className="topbar-error"
             role="alert"
             title={[taskError.message, taskError.hint].filter(Boolean).join(' ')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minWidth: 0,
-              fontSize: '0.78rem', color: 'var(--status-critical)', maxWidth: 320,
-            }}
           >
-            <AlertTriangle size={13} aria-hidden="true" style={{ flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {taskError.message}
-            </span>
+            <AlertTriangle size={13} aria-hidden="true" />
+            <span className="topbar-error-text">{taskError.message}</span>
           </span>
         )}
         {!isRunning && !taskError && lastUpdated && (
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          <span className="topbar-updated">
             {refreshing ? 'Updating…' : `Updated ${relativeAge((Date.now() - lastUpdated.getTime()) / 1000)}`}
           </span>
         )}
         <button
           type="button"
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary btn-sm topbar-refresh"
           onClick={() => runRefresh()}
           disabled={isRunning}
         >
-          <RefreshCw size={14} className={isRunning ? 'spin' : undefined} />
-          {isRunning ? 'Running…' : 'Refresh data'}
+          <RefreshCw size={14} className={isRunning ? 'spin' : undefined} aria-hidden="true" />
+          {/* Visually hidden on narrow phones, where the icon stands alone; it
+              stays in the DOM as the button's accessible name. */}
+          <span className="topbar-refresh-label">{isRunning ? 'Running…' : 'Refresh data'}</span>
         </button>
       </div>
     </header>

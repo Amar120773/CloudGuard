@@ -279,7 +279,8 @@ whatever happened to be in the current batch.
 
 ## Dashboard
 
-A welcome screen, then five pages; dark theme, responsive to phone width.
+A welcome screen, then five pages; dark theme, built for phones as well as
+desktops (see [On phones](#on-phones)).
 
 | Page | What it shows |
 |---|---|
@@ -293,7 +294,7 @@ A welcome screen, then five pages; dark theme, responsive to phone width.
 ### Visualisation decisions
 
 Charts are hand-rolled SVG — no chart library — which keeps the entry bundle at
-**~68 KB gzipped** (59.5 KB of JavaScript plus 9 KB of CSS) and gives exact
+**~69 KB gzipped** (59.4 KB of JavaScript plus 9.5 KB of CSS) and gives exact
 control over the marks. The Outfit typeface ships with the app as a variable
 font (a 32 KB file covers Latin text), so nothing loads from a font CDN and the
 design's in-between weights render exactly.
@@ -317,6 +318,25 @@ honours `prefers-reduced-motion`.
 - **One y-axis per chart, always.** No dual-axis plots.
 - Event rows are keyboard-reachable (`tabIndex`, Enter/Space) with a visible focus
   ring, not mouse-only.
+
+### On phones
+
+Checked in a 390 × 844 touch viewport on every page and overlay: nothing
+scrolls sideways, no table needs swiping, every control is at least 44 px tall,
+and no text is under 11 px. The phone rules apply only below 640 px wide or on
+touch screens, so the desktop layout is unaffected.
+
+- **Top bar** — one line: the title truncates with an ellipsis, search and
+  refresh become icon buttons (the refresh label stays as the accessible name),
+  and the "Updated…" note is dropped.
+- **Panel headers** — buttons move under the title when both no longer fit.
+- **Tables** — keep their essential columns (Security: time, event, score,
+  status; Resources: resource, state, CPU, cost; Cost: service, trend,
+  projection, risk). A resource's type, environment and note move under its
+  name rather than disappearing.
+- **Inputs are 16 px**, so iOS Safari does not zoom the page when one is tapped.
+- **Touch screens** get 44 px targets and no keyboard-only hints (`Ctrl K`,
+  "press Enter", arrow-key legends).
 
 ### Loading, fallback and error states
 
@@ -500,7 +520,7 @@ pytest                      # or: pytest -v
 pytest tests/test_cost_module.py        # cost pipeline only
 pytest -k "anomaly or security"         # security pipeline only
 
-# Frontend — 134 tests, plus lint
+# Frontend — 140 tests, plus lint
 cd frontend
 npm test
 npm run test:watch
@@ -523,7 +543,7 @@ run. Coverage by area:
 | `test_freshness.py` | 36 | The four freshness states, timestamp parsing, malformed input |
 | `test_deployment_security.py` | 88 | No secrets in `/api/health` or logs, rate-limit identity, trusted proxies, scoped CORS, Redis TLS for Celery, dispatch failures, reported model config, anomaly-injection control |
 
-Frontend (Vitest + Testing Library): `dashboard.test.jsx` 39, `units.test.jsx` 39,
+Frontend (Vitest + Testing Library): `dashboard.test.jsx` 43, `units.test.jsx` 41,
 `palette.test.jsx` 25, `hardening.test.jsx` 22, `landing.test.jsx` 9 — page
 states, the API client (including non-JSON responses), charts, the command
 palette, the welcome screen and its routing, and the static hosting config
@@ -641,7 +661,7 @@ precision even if it is a genuine statistical outlier.
 | Task submission (`POST /run`) | 50–250 ms, against ~5 s of queued work |
 | Full refresh on the worker | ~5 s (8 resources, 944 cost records, 240 events) |
 | Dashboard payload | 36 KB raw / **7 KB gzipped** (was 108 KB uncompressed) |
-| Frontend entry bundle | 182 KB raw / 59.5 KB gzipped JS + 38 KB / 9 KB CSS + a 32 KB self-hosted font; the five pages load lazily (4–13 KB raw each) and are prefetched when idle |
+| Frontend entry bundle | 182 KB raw / 59.4 KB gzipped JS + 40 KB / 9.5 KB CSS + a 32 KB self-hosted font; the five pages load lazily (4–13 KB raw each) and are prefetched when idle |
 
 Every response carries an `X-Process-Time-Ms` header, and the API logs any
 request over 1 s.
@@ -843,7 +863,7 @@ cloudguard/
 │   │   ├── charts/              Hand-rolled SVG charts
 │   │   ├── pages/               The five dashboard pages
 │   │   └── index.css            Design system
-│   ├── tests/                   134 tests
+│   ├── tests/                   140 tests
 │   ├── Dockerfile · nginx.conf
 │   ├── vercel.json · .eslintrc.cjs
 │   └── package.json             Node 22.x pinned in "engines"

@@ -181,15 +181,17 @@ export default function CloudResources() {
           <div className="table-wrap">
             <table className="data">
               <thead>
+                {/* On phones the `col-optional` columns are hidden; their type,
+                    environment and note move under the resource name instead. */}
                 <tr>
                   <th>Resource</th>
-                  <th>Type</th>
-                  <th>Env</th>
+                  <th className="col-optional">Type</th>
+                  <th className="col-optional">Env</th>
                   <th>State</th>
                   <th className="num">CPU</th>
-                  <th className="num">Egress</th>
+                  <th className="num col-optional">Egress</th>
                   <th className="num">Est. cost / mo</th>
-                  <th>Note</th>
+                  <th className="col-optional">Note</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,12 +199,21 @@ export default function CloudResources() {
                   <tr key={resource.resource_id} className={resource.idle ? 'is-anomaly' : undefined}>
                     <td>
                       <div style={{ fontWeight: 550 }}>{resource.name || resource.resource_id}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      <div className="resource-id" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                         {resource.resource_id}
                       </div>
+                      <div className="only-narrow resource-narrow-meta">
+                        {resource.instance_type} · {resource.environment || 'no environment tag'}
+                      </div>
+                      {(resource.idle || resource.optimization_hint) && (
+                        <div className="only-narrow resource-narrow-note">
+                          {resource.idle && <Badge variant="badge-warning" icon={MoonStar}>Idle</Badge>}{' '}
+                          {resource.optimization_hint || ''}
+                        </div>
+                      )}
                     </td>
-                    <td>{resource.instance_type}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{resource.environment || '—'}</td>
+                    <td className="col-optional">{resource.instance_type}</td>
+                    <td className="col-optional" style={{ color: 'var(--text-secondary)' }}>{resource.environment || '—'}</td>
                     <td>
                       <Badge variant={resource.status === 'running' ? 'badge-good' : ''}>
                         {resource.status}
@@ -211,11 +222,11 @@ export default function CloudResources() {
                     <td className="num" style={{ color: utilizationColor(resource.cpu_utilization) }}>
                       {resource.cpu_utilization != null ? percent(resource.cpu_utilization, 1) : '—'}
                     </td>
-                    <td className="num">
+                    <td className="num col-optional">
                       {resource.network_out_mb != null ? `${number(resource.network_out_mb)} MB` : '—'}
                     </td>
                     <td className="num" style={{ fontWeight: 650 }}>{money(resource.estimated_cost, { decimals: 2 })}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: 260 }}>
+                    <td className="col-optional" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: 260 }}>
                       {resource.idle && <Badge variant="badge-warning" icon={MoonStar}>Idle</Badge>}{' '}
                       {resource.optimization_hint || ''}
                     </td>

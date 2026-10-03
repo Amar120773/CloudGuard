@@ -180,10 +180,7 @@ export default function ForecastChart({
                 x1={x(forecastIdx)} x2={x(forecastIdx)} y1={0} y2={innerH}
                 stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="4 4"
               />
-              <text
-                className="chart-label" x={x(forecastIdx) + 6} y={12}
-                style={{ fontSize: 10, fill: 'var(--text-muted)' }}
-              >
+              <text className="chart-label is-subtle" x={x(forecastIdx) + 6} y={12}>
                 forecast →
               </text>
             </>

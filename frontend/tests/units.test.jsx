@@ -156,6 +156,19 @@ describe('Formatters', () => {
     expect(money(NaN)).toBe('—')
   })
 
+  it('puts the minus sign before the currency symbol', () => {
+    // The budget tile showed "$-506" for an overrun.
+    expect(money(-506.4)).toBe('-$506')
+    expect(money(-1234.5, { decimals: 2 })).toBe('-$1,234.50')
+    expect(money(-14641, { compact: true })).toBe('-$14.6k')
+  })
+
+  it('never shows a sign on a value that rounds to zero', () => {
+    expect(money(-0.2)).toBe('$0')
+    expect(money(-0.004, { decimals: 2 })).toBe('$0.00')
+    expect(money(-0)).toBe('$0')
+  })
+
   it('formats percentages with an optional sign', () => {
     expect(percent(4.59)).toBe('4.6%')
     expect(percent(4.59, 2, { signed: true })).toBe('+4.59%')

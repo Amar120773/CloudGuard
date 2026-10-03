@@ -3,10 +3,14 @@
 export function money(value, { decimals = 0, compact = false } = {}) {
   if (value == null || Number.isNaN(Number(value))) return '—'
   const n = Number(value)
-  if (compact && Math.abs(n) >= 10000) {
-    return `$${(n / 1000).toFixed(1)}k`
+  const abs = Math.abs(n)
+  if (compact && abs >= 10000) {
+    return `${n < 0 ? '-' : ''}$${(abs / 1000).toFixed(1)}k`
   }
-  return `$${n.toLocaleString('en-US', {
+  // The sign goes before the currency symbol ("-$506", not "$-506"), and a value
+  // that rounds to zero at this precision carries no sign at all.
+  const negative = n < 0 && Number(abs.toFixed(decimals)) !== 0
+  return `${negative ? '-' : ''}$${abs.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })}`

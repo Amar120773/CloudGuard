@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../src/App'
 import Overview from '../src/pages/Overview'
+import CloudResources from '../src/pages/CloudResources'
 import CostIntelligence from '../src/pages/CostIntelligence'
 import SecurityAnalytics from '../src/pages/SecurityAnalytics'
 import AiInsights from '../src/pages/AiInsights'
@@ -408,6 +409,63 @@ describe('Security Analytics', () => {
     await screen.findAllByText('Authentication failure burst')
     expect(screen.queryByText(/decision threshold/)).not.toBeInTheDocument()
     expect(container.querySelector('line[stroke-dasharray="5 4"]')).toBeNull()
+  })
+})
+
+// ==========================================================================
+// jsdom applies no CSS, so these pin the markup the phone stylesheet relies
+// on: which columns may be hidden, and where hidden details reappear.
+describe('Phone layout hooks', () => {
+  const optionalHeaders = (container) =>
+    [...container.querySelectorAll('th.col-optional')].map((th) => th.textContent.trim())
+
+  it('keeps score and status as essential columns in the event feed', async () => {
+    mockApi()
+    const { container } = renderPage(<SecurityAnalytics />)
+    await screen.findAllByText('Authentication failure burst')
+
+    expect(optionalHeaders(container)).toEqual(['Source', 'Dominant metric', 'Severity'])
+    const essential = [...container.querySelectorAll('th:not(.col-optional)')].map((th) => th.textContent)
+    expect(essential).toEqual(expect.arrayContaining(['Time', 'Event', 'Score', 'Status']))
+  })
+
+  it('moves resource type, environment and note under the name instead of losing them', async () => {
+    mockApi({
+      overrides: {
+        '/api/cloud/resources': () => jsonResponse({
+          region: 'us-east-1', total_resources: 1, running: 1, stopped: 0,
+          idle_resources: 1, estimated_monthly_cost: 8.47, potential_monthly_savings: 8.47,
+          freshness: {},
+          resources: [{
+            resource_id: 'i-0abc123', name: 'cg-deve-db-03', status: 'running',
+            instance_type: 't3.micro', environment: 'development',
+            cpu_utilization: 2.1, network_out_mb: 12, estimated_cost: 8.47,
+            idle: true, optimization_hint: 'Idle for 24h: stop or downsize.',
+          }],
+        }),
+      },
+    })
+    const { container } = renderPage(<CloudResources />)
+    await screen.findByText('cg-deve-db-03')
+
+    expect(optionalHeaders(container)).toEqual(['Type', 'Env', 'Egress', 'Note'])
+    const nameCell = screen.getByText('cg-deve-db-03').closest('td')
+    expect(within(nameCell).getByText('t3.micro · development')).toHaveClass('only-narrow')
+    expect(within(nameCell).getByText(/Idle for 24h/)).toHaveClass('only-narrow')
+  })
+
+  it('leaves the service bars to carry totals in the cost table', async () => {
+    mockApi()
+    const { container } = renderPage(<CostIntelligence />)
+    await screen.findByText('Service-level spend')
+    expect(optionalHeaders(container)).toEqual(['Total', 'Daily avg'])
+  })
+
+  it('keeps the Refresh button named even when its label is visually hidden', async () => {
+    mockApi()
+    render(<App />)
+    const button = await screen.findByRole('button', { name: 'Refresh data' })
+    expect(button.querySelector('.topbar-refresh-label')).toHaveTextContent('Refresh data')
   })
 })
 

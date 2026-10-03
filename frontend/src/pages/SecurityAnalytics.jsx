@@ -241,14 +241,17 @@ export default function SecurityAnalytics() {
           <div className="table-wrap">
             <table className="data">
               <thead>
+                {/* `col-optional` columns are hidden on phones so the score and
+                    status fit without sideways scrolling; the detail panel
+                    still shows all of them. */}
                 <tr>
                   <th>Time</th>
                   <th>Event</th>
-                  <th>Source</th>
-                  <th>Dominant metric</th>
+                  <th className="col-optional">Source</th>
+                  <th className="col-optional">Dominant metric</th>
                   <th className="num">Score</th>
                   <th>Status</th>
-                  <th>Severity</th>
+                  <th className="col-optional">Severity</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,13 +274,13 @@ export default function SecurityAnalytics() {
                   >
                     <td className="mono">{clockTime(event.timestamp)}</td>
                     <td style={{ fontWeight: 550 }}>{event.event_type}</td>
-                    <td className="mono">{event.source}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{event.metric}</td>
+                    <td className="mono col-optional">{event.source}</td>
+                    <td className="col-optional" style={{ color: 'var(--text-secondary)' }}>{event.metric}</td>
                     <td className="num" style={{ fontWeight: 650, color: severityColor(event.severity) }}>
                       {event.anomaly_score.toFixed(1)}
                     </td>
                     <td><StatusBadge status={event.status} /></td>
-                    <td>
+                    <td className="col-optional">
                       <Badge variant={severityClass(event.severity)}>{event.severity}</Badge>
                     </td>
                   </tr>
