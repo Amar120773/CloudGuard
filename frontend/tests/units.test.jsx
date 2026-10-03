@@ -4,6 +4,7 @@ import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ApiError, request } from '../src/api/client'
+import { TaskProgress } from '../src/components/Primitives'
 import ForecastChart from '../src/charts/ForecastChart'
 import ServiceBars from '../src/charts/ServiceBars'
 import Sparkline from '../src/charts/Sparkline'
@@ -142,6 +143,22 @@ describe('API client: responses that are not the API', () => {
     expect(error.status).toBe(404)
     expect(error.code).toBe('http_error')
     expect(error.message).toBe('Request failed with status 404')
+  })
+})
+
+// ==========================================================================
+describe('Task progress', () => {
+  const inlineTask = { status: 'PROCESSING', progress: 40, stage: 'Running inline', executor: 'inline' }
+
+  it('warns when work fell back to running inline', () => {
+    const { getByText } = render(<TaskProgress task={inlineTask} />)
+    expect(getByText('inline')).toBeInTheDocument()
+  })
+
+  it('does not warn when inline is the design (standalone mode)', () => {
+    const { queryByText, getByText } = render(<TaskProgress task={inlineTask} expectedInline />)
+    expect(getByText('Running inline')).toBeInTheDocument()
+    expect(queryByText('inline')).not.toBeInTheDocument()
   })
 })
 

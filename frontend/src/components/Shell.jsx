@@ -24,7 +24,7 @@ export const PAGES = [
 ]
 
 export function Sidebar({ page, onNavigate, open, onClose }) {
-  const { overview, health, degraded } = useDashboard()
+  const { overview, health, degraded, standalone } = useDashboard()
   const anomalies = overview?.anomaly_count || 0
 
   const dependencies = health?.dependencies || []
@@ -110,6 +110,18 @@ export function Sidebar({ page, onNavigate, open, onClose }) {
               </span>
             </div>
           ))}
+          {/* Redis and the worker are absent on purpose here, so they get a
+              neutral line rather than red "down" rows. */}
+          {standalone && (
+            <div
+              className="health-row"
+              title="Standalone mode: one process keeps results in memory and runs analysis jobs itself."
+            >
+              <span className="dot info" />
+              mode
+              <span className="detail">standalone</span>
+            </div>
+          )}
         </div>
         {degraded && (
           <Badge variant="badge-warning" icon={Activity}>Degraded mode</Badge>
@@ -121,7 +133,9 @@ export function Sidebar({ page, onNavigate, open, onClose }) {
 
 export function TopBar({ page, onToggleMenu, onOpenPalette }) {
   const meta = PAGES.find((p) => p.id === page) || PAGES[0]
-  const { isRunning, task, taskError, runRefresh, lastUpdated, refreshing } = useDashboard()
+  const {
+    isRunning, task, taskError, runRefresh, lastUpdated, refreshing, standalone,
+  } = useDashboard()
 
   return (
     <header className="topbar">
@@ -152,7 +166,7 @@ export function TopBar({ page, onToggleMenu, onOpenPalette }) {
             <kbd className="palette-kbd">{isMac ? '⌘' : 'Ctrl'} K</kbd>
           </button>
         )}
-        {isRunning && task && <TaskProgress task={task} />}
+        {isRunning && task && <TaskProgress task={task} expectedInline={standalone} />}
         {/* A refused submission (rate limit, broker fault) must not fail silently. */}
         {!isRunning && taskError && (
           <span

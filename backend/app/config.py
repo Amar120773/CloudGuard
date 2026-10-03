@@ -140,6 +140,20 @@ class Settings(BaseSettings):
     anomaly_random_state: int = 42
     anomaly_score_threshold: float = 65.0
 
+    @property
+    def standalone(self) -> bool:
+        """No Redis and no Celery on purpose: one process does everything.
+
+        Set ``REDIS_URL=none`` for a single free web service. Results live in this
+        process's memory and jobs run on its own threads, which is the design in
+        that setup rather than a fault, so nothing reports it as degraded. An
+        empty value means the same; it used to leave Celery guessing a broker.
+        A separately configured CELERY_BROKER_URL means a task queue exists, so
+        that combination is not standalone.
+        """
+        no_redis = self.redis_url.strip().lower() in ("", "none")
+        return no_redis and not self.celery_broker_url.strip()
+
     @field_validator("allow_anomaly_injection", mode="before")
     @classmethod
     def _blank_means_unset(cls, value):

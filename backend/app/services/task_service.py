@@ -88,6 +88,9 @@ def broker_available(force: bool = False) -> bool:
     """True when the Celery broker accepts TCP connections (cached briefly)."""
     global _broker_up, _broker_probed_at
 
+    if settings.standalone:
+        return False  # no task queue by design; jobs run in this process
+
     with _lock:
         now = time.time()
         if (
@@ -357,16 +360,20 @@ def submit(
                 "executor": "celery",
                 "message": "Queued on the Celery worker pool.",
             }
+    elif settings.standalone:
+        reason = None
+        logger.info("Running %s in this process (standalone mode)", task_type.value)
     else:
         reason = (
             f"Celery broker at {redact_url(settings.broker_url)} is not accepting connections"
         )
 
-    logger.warning(
-        "Celery dispatch of %s failed (%s); running inline on the local pool",
-        task_type.value,
-        reason,
-    )
+    if reason is not None:
+        logger.warning(
+            "Celery dispatch of %s failed (%s); running inline on the local pool",
+            task_type.value,
+            reason,
+        )
 
     task_id = f"inline-{uuid.uuid4().hex[:16]}"
     create_record(task_id, task_type, executor="inline")
@@ -383,7 +390,9 @@ def submit(
         "status": TaskStatus.PENDING,
         "executor": "inline",
         "message": (
-            "Celery broker unreachable - running on a local worker thread. "
+            "Running in the API process (standalone mode)."
+            if settings.standalone
+            else "Celery broker unreachable - running on a local worker thread. "
             "Start Redis and the Celery worker for the full asynchronous path."
         ),
     }

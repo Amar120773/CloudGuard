@@ -523,6 +523,23 @@ describe('App shell', () => {
     expect(screen.getByText('1 worker')).toBeInTheDocument()
   })
 
+  it('presents standalone mode as a setup, not an outage', async () => {
+    mockApi({
+      health: {
+        ...healthPayload,
+        mode: 'standalone',
+        dependencies: healthPayload.dependencies.filter((d) => ['api', 'cloud'].includes(d.name)),
+      },
+    })
+    render(<App />)
+
+    expect(await screen.findByText('standalone')).toBeInTheDocument()
+    expect(screen.queryByText('redis')).not.toBeInTheDocument()
+    expect(screen.queryByText('celery')).not.toBeInTheDocument()
+    expect(screen.queryByText('Degraded mode')).not.toBeInTheDocument()
+    expect(screen.queryByText(/running in degraded mode/i)).not.toBeInTheDocument()
+  })
+
   it('badges the nav with the live anomaly count', async () => {
     mockApi()
     render(<App />)

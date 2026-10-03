@@ -212,7 +212,7 @@ export function StaleBanner({ label, ageSeconds, onRetry }) {
 }
 
 /* --------------------------------------------------------- task progress */
-export function TaskProgress({ task, compact = false }) {
+export function TaskProgress({ task, compact = false, expectedInline = false }) {
   if (!task) return null
   const { status, progress = 0, stage, executor } = task
   const done = status === 'COMPLETED'
@@ -229,7 +229,8 @@ export function TaskProgress({ task, compact = false }) {
           <div className="task-bar-fill" style={{ width: `${Math.max(4, progress)}%` }} />
         </div>
       )}
-      {executor === 'inline' && !compact && (
+      {/* A warning only when inline is a fallback; in standalone mode it is the design. */}
+      {executor === 'inline' && !compact && !expectedInline && (
         <span title="Celery broker unreachable; running on a local worker thread">
           <Badge variant="badge-warning">inline</Badge>
         </span>

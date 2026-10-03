@@ -118,6 +118,8 @@ class CacheBackend:
 
     def _redis(self):
         """Return a live client, or None when Redis is down (re-probed lazily)."""
+        if settings.standalone:
+            return None  # no Redis by design: never connect, never warn
         with self._lock:
             now = time.time()
             if self._available and self._client is not None:
@@ -154,10 +156,15 @@ class CacheBackend:
 
     @property
     def degraded(self) -> bool:
-        """True when reads/writes are being served from process memory."""
-        return self._redis() is None
+        """True when Redis is configured but reads/writes fall back to memory.
+
+        Standalone mode serves from memory by design, so it is not degraded.
+        """
+        return not settings.standalone and self._redis() is None
 
     def health(self) -> Dict[str, Any]:
+        if settings.standalone:
+            return {"backend": "memory", "connected": False, "degraded": False, "mode": "standalone"}
         client = self._redis()
         if client is None:
             return {"backend": "memory", "connected": False, "degraded": True}

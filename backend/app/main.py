@@ -124,7 +124,12 @@ async def lifespan(app: FastAPI):
     check_proxy_trust()
 
     redis_health = cache.health()
-    if not redis_health["connected"]:
+    if settings.standalone:
+        logger.info(
+            "Standalone mode (REDIS_URL=none): results are kept in this process and "
+            "background jobs run on its own threads."
+        )
+    elif not redis_health["connected"]:
         logger.warning(
             "Redis is unavailable at startup; caching falls back to this process "
             "and tasks will run inline until Redis and a Celery worker are up."

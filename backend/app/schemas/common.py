@@ -76,6 +76,10 @@ class ServiceStatus(CloudGuardModel):
 
 class HealthResponse(CloudGuardModel):
     status: str = Field(description="ok | degraded")
+    mode: str = Field(
+        "distributed",
+        description="distributed (Redis + Celery) | standalone (one process, REDIS_URL=none)",
+    )
     app: str
     version: str
     environment: str

@@ -78,6 +78,9 @@ export function DashboardProvider({ children }) {
       // health
       health: health.data,
       healthError: health.error,
+      // One process without Redis or Celery, on purpose (REDIS_URL=none): jobs
+      // running inline are the design there, not a fallback to warn about.
+      standalone: health.data?.mode === 'standalone',
 
       // background work
       task: refreshTask.task,

@@ -711,3 +711,88 @@ class TestAnomalyInjectionControl:
         monkeypatch.setattr(settings, "allow_anomaly_injection", allowed)
         body = client.get("/api/dashboard").json()
         assert body["features"] == {"anomaly_injection": allowed}
+
+
+# ==========================================================================
+# Standalone mode: one free web service, no Redis and no worker on purpose
+# ==========================================================================
+class TestStandaloneMode:
+    @pytest.mark.parametrize(
+        "redis_url,broker,expected",
+        [
+            ("none", "", True),
+            ("None ", "", True),
+            ("", "", True),  # an empty value used to leave Celery guessing a broker
+            ("redis://localhost:6379/0", "", False),
+            ("none", "redis://broker:6379/0", False),  # a task queue exists
+        ],
+    )
+    def test_what_counts_as_standalone(self, monkeypatch, redis_url, broker, expected):
+        monkeypatch.setenv("REDIS_URL", redis_url)
+        monkeypatch.setenv("CELERY_BROKER_URL", broker)
+        assert Settings().standalone is expected
+
+    @pytest.fixture
+    def standalone(self, monkeypatch):
+        from app.api import health
+
+        monkeypatch.setattr(settings, "redis_url", "none")
+        monkeypatch.setattr(settings, "celery_broker_url", "")
+        cache.flush_namespace(Keys.RATE_LIMIT_PREFIX)
+        health.reset_ping_cache()
+        yield
+        health.reset_ping_cache()
+
+    @pytest.fixture
+    def no_network(self, monkeypatch):
+        """Fail loudly if standalone mode tries to reach Redis or a broker."""
+        import socket
+
+        from app.cache import CacheBackend
+
+        def refuse(*args, **kwargs):
+            raise AssertionError("standalone mode must not open network connections")
+
+        monkeypatch.setattr(socket, "create_connection", refuse)
+        monkeypatch.setattr(CacheBackend, "_connect", refuse)
+
+    def test_health_is_ok_and_lists_only_what_exists(self, client, standalone, no_network):
+        body = client.get("/api/health").json()
+        assert body["status"] == "ok"
+        assert body["mode"] == "standalone"
+        assert [d["name"] for d in body["dependencies"]] == ["api", "cloud"]
+
+    def test_the_dashboard_is_not_degraded(self, client, standalone, no_network):
+        assert client.get("/api/dashboard").json()["degraded"] is False
+
+    def test_jobs_run_in_process_quietly(self, client, standalone, no_network, caplog):
+        with caplog.at_level(logging.WARNING):
+            response = client.post("/api/cloud/ingest")
+            assert task_service.wait_for_inline(timeout=60)
+
+        body = response.json()
+        assert response.status_code == 202
+        assert body["executor"] == "inline"
+        assert "standalone" in body["message"]
+        assert task_service.get_record(body["task_id"])["status"] == "COMPLETED"
+        # A deliberate setup is not a failure: no "dispatch failed" warning.
+        assert "dispatch" not in caplog.text.lower()
+
+    def test_the_cache_works_from_memory(self, standalone, no_network):
+        from app.cache import CacheBackend
+
+        backend = CacheBackend()
+        backend.set_json("cloudguard:test:standalone", {"ok": True}, 60)
+        assert backend.get_json("cloudguard:test:standalone") == {"ok": True}
+        assert backend.degraded is False
+        assert backend.health()["mode"] == "standalone"
+
+    def test_a_configured_redis_that_is_down_is_still_degraded(self, client):
+        """The honest warning stays for a real outage (conftest points at a dead port)."""
+        from app.api import health
+
+        health.reset_ping_cache()
+        body = client.get("/api/health").json()
+        assert body["mode"] == "distributed"
+        assert body["status"] == "degraded"
+        assert client.get("/api/dashboard").json()["degraded"] is True

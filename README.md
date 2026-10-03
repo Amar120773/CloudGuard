@@ -124,6 +124,21 @@ process instead would hide a broken deployment behind a successful response.
 This is a fallback, not the architecture — with Redis and a worker running, the
 full asynchronous path is used.
 
+### Standalone mode: one process, on purpose
+
+Set `REDIS_URL=none` to run without Redis and without a worker by design — for
+example as a single free web service. The API then never tries to reach Redis or
+a broker, keeps results in its own memory, and runs analysis jobs on its own
+threads. Because that is the intended setup rather than an outage,
+`/api/health` reports `"status": "ok"` with `"mode": "standalone"` and lists only
+the API and the cloud provider, and the dashboard shows a neutral "mode:
+standalone" line instead of the degraded warning. A configured Redis that is down
+is still reported as degraded.
+
+What standalone mode gives up: results are lost whenever the process restarts
+(on a free host, whenever it sleeps), and nothing refreshes on a schedule — press
+**Refresh data**.
+
 ---
 
 ## Architecture
@@ -497,7 +512,7 @@ annotated list. The ones worth knowing:
 | Variable | Default | Why you would change it |
 |---|---|---|
 | `CLOUD_MODE` | `moto_inproc` | `moto_server` for a shared mock, `real` for real AWS |
-| `REDIS_URL` | `redis://localhost:6379/0` | Point at your Redis; `rediss://` (TLS) gets `ssl_cert_reqs=required` added for Celery |
+| `REDIS_URL` | `redis://localhost:6379/0` | Point at your Redis; `rediss://` (TLS) gets `ssl_cert_reqs=required` added for Celery; `none` runs [standalone](#standalone-mode-one-process-on-purpose) |
 | `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Read by uvicorn: proxies trusted to report the client IP — see [Client IPs behind a proxy](#client-ips-behind-a-proxy) |
 | `DEMO_SEED` | `1337` | Changes the entire demo dataset — keep fixed for reproducibility |
 | `MONTHLY_BUDGET` | `14000` | Drives the budget-breach warning |
@@ -514,13 +529,13 @@ annotated list. The ones worth knowing:
 ## Testing
 
 ```bash
-# Backend — 343 tests
+# Backend — 353 tests
 cd backend
 pytest                      # or: pytest -v
 pytest tests/test_cost_module.py        # cost pipeline only
 pytest -k "anomaly or security"         # security pipeline only
 
-# Frontend — 140 tests, plus lint
+# Frontend — 143 tests, plus lint
 cd frontend
 npm test
 npm run test:watch
@@ -541,9 +556,9 @@ run. Coverage by area:
 | `test_config.py` | 16 | Settings parsing, `.env.example` validity |
 | `test_hardening.py` | 50 | Compression, health latency, API keys, rate limits, CORS, payload shape, task batching |
 | `test_freshness.py` | 36 | The four freshness states, timestamp parsing, malformed input |
-| `test_deployment_security.py` | 88 | No secrets in `/api/health` or logs, rate-limit identity, trusted proxies, scoped CORS, Redis TLS for Celery, dispatch failures, reported model config, anomaly-injection control |
+| `test_deployment_security.py` | 98 | No secrets in `/api/health` or logs, rate-limit identity, trusted proxies, scoped CORS, Redis TLS for Celery, dispatch failures, reported model config, anomaly-injection control, standalone mode |
 
-Frontend (Vitest + Testing Library): `dashboard.test.jsx` 43, `units.test.jsx` 41,
+Frontend (Vitest + Testing Library): `dashboard.test.jsx` 44, `units.test.jsx` 43,
 `palette.test.jsx` 25, `hardening.test.jsx` 22, `landing.test.jsx` 9 — page
 states, the API client (including non-JSON responses), charts, the command
 palette, the welcome screen and its routing, and the static hosting config
@@ -750,7 +765,24 @@ Putting the API behind serverless would also defeat the design: work is queued
 *off* the request path on purpose, and a function that returns kills whatever it
 spawned.
 
-Any container host runs the existing `docker-compose.yml` as-is:
+**Free option: one Render web service.** Render's free plan covers web services
+but not background workers, so run the API alone in
+[standalone mode](#standalone-mode-one-process-on-purpose): New → Web Service →
+this repository, Language **Docker**, Root Directory `backend`, Instance Type
+**Free**, Health Check Path `/api/health`, and these variables:
+
+```bash
+PORT=8000
+ENVIRONMENT=production
+REDIS_URL=none
+CORS_ORIGINS=https://<your-dashboard>.vercel.app   # no trailing slash
+```
+
+Do not add a Redis (Key Value) instance without a worker: jobs would be queued
+with nothing to run them.
+
+For the full setup with a worker and scheduled refreshes, any container host
+runs the existing `docker-compose.yml` as-is:
 
 | Host | Notes |
 |---|---|
@@ -850,7 +882,7 @@ cloudguard/
 │   │       ├── aws.py           boto3 provider
 │   │       ├── moto_setup.py    Mock environment + seeding
 │   │       └── datagen.py       Deterministic demo data
-│   ├── tests/                   343 tests
+│   ├── tests/                   353 tests
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
@@ -863,7 +895,7 @@ cloudguard/
 │   │   ├── charts/              Hand-rolled SVG charts
 │   │   ├── pages/               The five dashboard pages
 │   │   └── index.css            Design system
-│   ├── tests/                   140 tests
+│   ├── tests/                   143 tests
 │   ├── Dockerfile · nginx.conf
 │   ├── vercel.json · .eslintrc.cjs
 │   └── package.json             Node 22.x pinned in "engines"
@@ -969,7 +1001,7 @@ without touching the ML, API or UI layers.
 | Dashboard shows "pipelines not yet run" | Normal on a cold start. Press **Refresh data**. |
 | `"executor": "inline"` in responses | Celery broker unreachable. Start Redis and the worker. |
 | `503 task_dispatch_failed` | The broker is up but refused the task — usually its URL or TLS settings. The API log names the cause. |
-| Sidebar shows redis/celery down | Check `docker compose ps`, or that Redis is on port 6379. |
+| Sidebar shows redis/celery down | Check `docker compose ps`, or that Redis is on port 6379. If you run without Redis on purpose (e.g. a free single web service), set `REDIS_URL=none`. |
 | Forecast says "fallback model in use" | Prophet's Stan backend failed to load. Check `cmdstanpy==1.2.4` is installed. |
 | `Prophet object has no attribute 'stan_backend'` | cmdstanpy ≥ 1.3 is installed. `pip install cmdstanpy==1.2.4`. |
 | Celery worker exits immediately on Windows | Use `-P solo`. |

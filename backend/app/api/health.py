@@ -23,16 +23,18 @@ def health() -> HealthResponse:
     Always 200 so a load balancer does not pull the API out when only a
     dependency is degraded; read `status` and `dependencies` for detail.
     """
-    dependencies = [
-        ServiceStatus(name="api", healthy=True, detail="FastAPI is serving requests"),
-        _redis_status(),
-        _celery_status(),
-        _cloud_status(),
-    ]
+    api = ServiceStatus(name="api", healthy=True, detail="FastAPI is serving requests")
+    if settings.standalone:
+        # No Redis and no Celery by design: listing them as "down" would report a
+        # deliberate single-process setup as an outage.
+        dependencies = [api, _cloud_status()]
+    else:
+        dependencies = [api, _redis_status(), _celery_status(), _cloud_status()]
     degraded = any(not dependency.healthy for dependency in dependencies)
 
     return HealthResponse(
         status="degraded" if degraded else "ok",
+        mode="standalone" if settings.standalone else "distributed",
         app=settings.app_name,
         version=settings.app_version,
         environment=settings.environment,
