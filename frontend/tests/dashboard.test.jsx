@@ -110,7 +110,7 @@ describe('Overview', () => {
     mockApi()
     renderPage(<Overview onNavigate={() => {}} />)
 
-    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    expect(await screen.findByText('Pipeline status', {}, LAZY_PAGE)).toBeInTheDocument()
     expect(screen.getByText('cost forecast')).toBeInTheDocument()
     // The badge now carries the four-state freshness value, not ready/pending.
     expect(screen.getAllByText('fresh').length).toBe(5)

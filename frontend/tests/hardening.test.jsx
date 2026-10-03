@@ -106,7 +106,7 @@ describe('Stale data banner', () => {
     mockApi({ dashboard: staleDashboardPayload })
     renderPage(<Overview onNavigate={() => {}} />)
 
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     expect(screen.getAllByText('stale').length).toBe(2)
     expect(screen.getAllByText('fresh').length).toBe(3)
   })
@@ -115,7 +115,7 @@ describe('Stale data banner', () => {
     mockApi({ dashboard: coldDashboardPayload })
     renderPage(<Overview onNavigate={() => {}} />)
 
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     expect(screen.getAllByText('unavailable').length).toBe(5)
     // A never-run pipeline is not "stale" - it has no last-known-good data.
     expect(screen.queryByText(/serving stale data/i)).not.toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('Spend sparkline', () => {
     mockApi({ dashboard: coldDashboardPayload })
     const { container } = renderPage(<Overview onNavigate={() => {}} />)
 
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     expect(sparklines(container).length).toBe(0)
   })
 })
@@ -151,7 +151,7 @@ describe('Lazy-loaded routes', () => {
   it('renders the Overview route after its chunk resolves', async () => {
     mockApi()
     render(<App />)
-    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    expect(await screen.findByText('Pipeline status', {}, LAZY_PAGE)).toBeInTheDocument()
   })
 
   it('shows a loading fallback while a route chunk loads', async () => {
@@ -159,14 +159,14 @@ describe('Lazy-loaded routes', () => {
     const { container } = render(<App />)
     // Before the lazy chunk resolves, skeletons stand in for the content.
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0)
-    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    expect(await screen.findByText('Pipeline status', {}, LAZY_PAGE)).toBeInTheDocument()
   })
 
   it('loads each route on navigation without breaking the shell', async () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     for (const [label, marker] of [
       [/Cost Intelligence/, 'Historical spend and forecast'],

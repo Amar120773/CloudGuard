@@ -69,7 +69,7 @@ describe('Opening and closing', () => {
   it('opens with the meta+K shortcut', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(await openPalette()).toBeInTheDocument()
@@ -78,7 +78,7 @@ describe('Opening and closing', () => {
   it('opens with ctrl+K for non-Mac users', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
@@ -87,7 +87,7 @@ describe('Opening and closing', () => {
   it('ignores a bare "k" so typing in a field is unaffected', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     fireEvent.keyDown(window, { key: 'k' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -97,7 +97,7 @@ describe('Opening and closing', () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     await user.click(screen.getByRole('button', { name: /open command palette/i }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
@@ -106,7 +106,7 @@ describe('Opening and closing', () => {
   it('closes on Escape', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     fireEvent.keyDown(dialog, { key: 'Escape' })
@@ -116,7 +116,7 @@ describe('Opening and closing', () => {
   it('toggles shut on a second shortcut press', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     await openPalette()
 
     fireEvent.keyDown(window, { key: 'k', metaKey: true })
@@ -129,7 +129,7 @@ describe('Commands', () => {
   it('lists every page and action, grouped', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     expect(within(dialog).getByText('Navigate')).toBeInTheDocument()
@@ -147,7 +147,7 @@ describe('Commands', () => {
   it('marks the page you are already on', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     const overview = within(dialog).getByText('Overview').closest('button')
@@ -158,7 +158,7 @@ describe('Commands', () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await user.type(within(dialog).getByLabelText(/search commands/i), 'anomaly')
@@ -171,7 +171,7 @@ describe('Commands', () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await user.type(within(dialog).getByLabelText(/search commands/i), 'prophet')
@@ -182,7 +182,7 @@ describe('Commands', () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     // "security" also appears in Overview's description; the page named
@@ -198,7 +198,7 @@ describe('Commands', () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await user.type(within(dialog).getByLabelText(/search commands/i), 'zzzznope')
@@ -211,7 +211,7 @@ describe('Keyboard navigation', () => {
   it('starts with the first command selected', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     const first = within(dialog).getByText('Overview').closest('button')
@@ -221,7 +221,7 @@ describe('Keyboard navigation', () => {
   it('moves the selection with the arrow keys', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     fireEvent.keyDown(dialog, { key: 'ArrowDown' })
@@ -236,7 +236,7 @@ describe('Keyboard navigation', () => {
   it('wraps around at the ends of the list', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     fireEvent.keyDown(dialog, { key: 'ArrowUp' })  // wraps to the last command
@@ -247,7 +247,7 @@ describe('Keyboard navigation', () => {
   it('navigates to the selected page on Enter', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     fireEvent.keyDown(dialog, { key: 'ArrowDown' })   // Cost Intelligence
@@ -265,7 +265,7 @@ describe('Actions', () => {
     const user = userEvent.setup()
     const posts = mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await user.click(within(dialog).getByText('Refresh all data').closest('button'))
@@ -279,7 +279,7 @@ describe('Actions', () => {
     const user = userEvent.setup()
     const posts = mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await user.click(within(dialog).getByText('Inject test anomaly').closest('button'))
@@ -295,7 +295,7 @@ describe('Actions', () => {
       dashboard: { ...dashboardPayload, features: { anomaly_injection: false } },
     })
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     expect(within(dialog).getByText('Re-score security events')).toBeInTheDocument()
@@ -306,7 +306,7 @@ describe('Actions', () => {
     const user = userEvent.setup()
     const posts = mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await user.click(within(dialog).getByText('Retrain cost forecast').closest('button'))
@@ -323,7 +323,7 @@ describe('Accessibility', () => {
   it('is a labelled modal dialog', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     expect(dialog).toHaveAttribute('aria-modal', 'true')
@@ -333,7 +333,7 @@ describe('Accessibility', () => {
   it('focuses the search field on open', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     await waitFor(() =>
@@ -343,7 +343,7 @@ describe('Accessibility', () => {
   it('exposes the command list with option semantics', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     expect(within(dialog).getByRole('listbox')).toBeInTheDocument()
@@ -353,7 +353,7 @@ describe('Accessibility', () => {
   it('points aria-activedescendant at the highlighted option', async () => {
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     const dialog = await openPalette()
 
     const input = within(dialog).getByLabelText(/search commands/i)
@@ -365,7 +365,7 @@ describe('Accessibility', () => {
     const user = userEvent.setup()
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     const trigger = screen.getByRole('button', { name: /open command palette/i })
     await user.click(trigger)

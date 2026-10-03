@@ -1266,8 +1266,18 @@ a.brand:hover { opacity: 0.85; }
 .landing-cta-arrow { transition: transform 0.25s var(--ease-out); }
 .landing-cta:hover .landing-cta-arrow,
 .landing-cta:focus-visible .landing-cta-arrow { transform: translateX(4px); }
-.landing-hint { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-muted); }
-.landing-hint .palette-kbd { display: inline-flex; align-items: center; gap: 0.25rem; }
+.landing-hint {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.8rem; color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s var(--ease);
+}
+.landing-hint .palette-kbd {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  transition: color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.landing-hint:hover { color: var(--text-secondary); }
+.landing-hint:hover .palette-kbd { color: var(--brand); box-shadow: 0 0 0 1px rgba(34, 224, 245, 0.45); }
 
 /* --- visual: the live scan, ringed by a radar sweep -------------------------- */
 .landing-visual { position: relative; display: grid; place-items: center; }

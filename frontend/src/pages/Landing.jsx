@@ -229,6 +229,9 @@ export default function Landing({ onEnter }) {
     overview, forecast, security, recentEvents, pipelineByName, reload,
   } = useDashboard()
   const [leaving, setLeaving] = useState(false)
+  // A ref, not the state: the button and the page-wide Enter key can both fire
+  // in one event, before a state update would be visible to the second.
+  const leavingRef = useRef(false)
   const leaveTimer = useRef(null)
 
   // Fetch fresh numbers the moment the API answers, rather than on the next poll.
@@ -242,10 +245,26 @@ export default function Landing({ onEnter }) {
   }, [])
 
   const enter = useCallback(() => {
-    if (leaving) return
+    if (leavingRef.current) return
+    leavingRef.current = true
     setLeaving(true)
     leaveTimer.current = setTimeout(onEnter, prefersReducedMotion() ? 0 : LEAVE_MS)
-  }, [leaving, onEnter])
+  }, [onEnter])
+
+  // "Press Enter" has to hold wherever focus is: one click on the page moves
+  // focus off the button, and the key would otherwise stop working.
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== 'Enter' || event.repeat || event.defaultPrevented) return
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+      // A focused control answers Enter itself; the button already enters.
+      if (event.target.closest?.('button, a, input, select, textarea, [contenteditable="true"]')) return
+      event.preventDefault()
+      enter()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [enter])
 
   const forecastReady = pipelineByName.cost_forecast?.ready
   const securityReady = pipelineByName.security_anomalies?.ready
@@ -313,7 +332,9 @@ export default function Landing({ onEnter }) {
               Enter dashboard
               <ArrowRight size={17} aria-hidden="true" className="landing-cta-arrow" />
             </button>
-            <span className="landing-hint">
+            {/* It looks like a key, so clicking it goes in as well. Pointer only:
+                keyboard users have the button and the Enter key itself. */}
+            <span className="landing-hint" onClick={enter}>
               or press <kbd className="palette-kbd"><CornerDownLeft size={11} aria-hidden="true" /> Enter</kbd>
             </span>
           </div>

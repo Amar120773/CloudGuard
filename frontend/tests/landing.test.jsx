@@ -85,6 +85,42 @@ describe('Welcome screen', () => {
     expect(await screen.findByText('Pipeline status', {}, AFTER_EXIT)).toBeInTheDocument()
   })
 
+  it('still goes in on Enter after a click moves focus off the button', async () => {
+    const user = userEvent.setup()
+    mockApi()
+    render(<App />)
+
+    await user.click(screen.getByRole('heading', { level: 1 }))
+    expect(enterButton()).not.toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    expect(await screen.findByText('Pipeline status', {}, AFTER_EXIT)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/overview')
+  })
+
+  it('goes in when the "press Enter" hint itself is clicked', async () => {
+    const user = userEvent.setup()
+    mockApi()
+    render(<App />)
+
+    await user.click(screen.getByText('Enter', { selector: 'kbd' }))
+
+    expect(await screen.findByText('Pipeline status', {}, AFTER_EXIT)).toBeInTheDocument()
+  })
+
+  it('enters once when the button and the page-wide Enter key both fire', async () => {
+    const user = userEvent.setup()
+    mockApi()
+    render(<App />)
+    const pushState = vi.spyOn(window.history, 'pushState')
+
+    await user.keyboard('{Enter}')
+    await user.click(enterButton())
+
+    expect(await screen.findByText('Pipeline status', {}, AFTER_EXIT)).toBeInTheDocument()
+    expect(pushState).toHaveBeenCalledTimes(1)
+  })
+
   it('lets deep links skip it', async () => {
     window.history.replaceState(null, '', '/cost')
     mockApi()
@@ -100,7 +136,7 @@ describe('Welcome screen', () => {
     mockApi()
     render(<App />)
 
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
     await user.click(screen.getByRole('link', { name: /cloudguard/i }))
 
     await waitFor(() => expect(enterButton()).toBeInTheDocument())
@@ -115,7 +151,7 @@ describe('Dashboard sections are pages', () => {
     window.history.replaceState(null, '', '/overview')
     mockApi()
     render(<App />)
-    await screen.findByText('Pipeline status')
+    await screen.findByText('Pipeline status', {}, LAZY_PAGE)
 
     const costLink = screen.getByRole('link', { name: /Cost Intelligence/ })
     expect(costLink).toHaveAttribute('href', '/cost')
@@ -126,7 +162,7 @@ describe('Dashboard sections are pages', () => {
     expect(document.title).toBe('Cost Intelligence · CloudGuard')
 
     act(() => window.history.back())
-    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    expect(await screen.findByText('Pipeline status', {}, LAZY_PAGE)).toBeInTheDocument()
     await waitFor(() => expect(window.location.pathname).toBe('/overview'))
   })
 
@@ -145,7 +181,7 @@ describe('Dashboard sections are pages', () => {
     mockApi()
     render(<App />)
 
-    expect(await screen.findByText('Pipeline status')).toBeInTheDocument()
+    expect(await screen.findByText('Pipeline status', {}, LAZY_PAGE)).toBeInTheDocument()
     expect(window.location.pathname).toBe('/overview')
   })
 })
